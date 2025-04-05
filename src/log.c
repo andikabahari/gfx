@@ -5,21 +5,21 @@
 
 void log_output_fmt(Log_Level level, const char *fmt, ...)
 {
-    size_t buffer_length = 4 * 1024; // 4 KiB
-    char buffer[buffer_length];
+    size_t max_length = 4 * 1024; // 4 KiB
+    char buffer[max_length];
 
     // Initialize the buffer to empty
     buffer[0] = '\0';
 
     switch (level) {
         case LOG_LEVEL_INFO:
-            strcat_s(buffer, buffer_length, "[INFO] ");
+            strcat_s(buffer, max_length, "[INFO] ");
             break;
         case LOG_LEVEL_WARNING:
-            strcat_s(buffer, buffer_length, "[WARNING] ");
+            strcat_s(buffer, max_length, "[WARNING] ");
             break;
         case LOG_LEVEL_ERROR:
-            strcat_s(buffer, buffer_length, "[ERROR] ");
+            strcat_s(buffer, max_length, "[ERROR] ");
             break;
         default:
             return;
@@ -27,7 +27,12 @@ void log_output_fmt(Log_Level level, const char *fmt, ...)
 
     va_list args;
     va_start(args, fmt);
-    vsnprintf(buffer + strlen(buffer), buffer_length - strlen(buffer), fmt, args);
+    size_t buffer_length = strlen(buffer);
+    vsnprintf_s(
+        buffer + buffer_length,
+        max_length - buffer_length,
+        max_length - buffer_length - 1,
+        fmt, args);
     va_end(args);
 
     platform_log_output(level, buffer);
