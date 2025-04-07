@@ -75,7 +75,7 @@ void platform_window_init(Platform_Window *window, const char *title, int x, int
 
     handle->hwnd = hwnd;
 
-    LOG_INFO("%s\n", "Showing application window");
+    LOG_INFO("Showing application window\n");
     // This is how we want to show the window (e.g. normal, minimized, maximized, etc.)
     ShowWindow(handle->hwnd, SW_SHOWNORMAL);
 
