@@ -19,12 +19,23 @@ void log_output_fmt(Log_Level level, const char *fmt, ...)
         case LOG_LEVEL_INFO:
             strcat_s(buffer, max_length, "[INFO] ");
             break;
+            
+        case LOG_LEVEL_DEBUG:
+            strcat_s(buffer, max_length, "[DEBUG] ");
+            break;
+            
         case LOG_LEVEL_WARNING:
             strcat_s(buffer, max_length, "[WARNING] ");
             break;
+            
         case LOG_LEVEL_ERROR:
             strcat_s(buffer, max_length, "[ERROR] ");
             break;
+
+        case LOG_LEVEL_FATAL:
+            strcat_s(buffer, max_length, "[FATAL] ");
+            break;
+
         default:
             return;
     }

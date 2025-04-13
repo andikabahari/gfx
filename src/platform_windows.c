@@ -134,11 +134,13 @@ void platform_log_output(Log_Level level, const char *msg)
         ? GetStdHandle(STD_OUTPUT_HANDLE)
         : GetStdHandle(STD_ERROR_HANDLE);
 
-    // Color order: info, warning, error
-    WORD colors[3] = {
-        FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,      // White
-        FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY, // Yellow
-        FOREGROUND_RED | FOREGROUND_INTENSITY,                    // Red
+    // Color order: info, debug, warning, error, fatal
+    WORD colors[5] = {
+        FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
+        FOREGROUND_BLUE,
+        FOREGROUND_RED | FOREGROUND_GREEN,
+        FOREGROUND_RED,
+        FOREGROUND_RED | FOREGROUND_INTENSITY,
     };
     SetConsoleTextAttribute(handle, colors[level]);
     LPDWORD chars_written = 0;
