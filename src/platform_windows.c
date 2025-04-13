@@ -5,9 +5,13 @@
 #include <windows.h>
 #include <windowsx.h>
 
+#include "types.h"
+#include "log.h"
+#include "input.h"
+
 typedef struct {
     HINSTANCE h_instance;
-    HWND hwnd;
+    HWND      hwnd;
 } Window_Handle;
 
 LRESULT CALLBACK _platform_window_handle_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param)
@@ -16,14 +20,47 @@ LRESULT CALLBACK _platform_window_handle_message(HWND hwnd, UINT msg, WPARAM w_p
         case WM_CLOSE:
             // TODO: quit app implementation
             break;
+
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
+        
+        case WM_SYSKEYDOWN:
+        case WM_KEYDOWN:
+        case WM_SYSKEYUP:
+        case WM_KEYUP:
+            input_process_key((int)w_param, msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
+            break;
+
+        case WM_LBUTTONDOWN:
+        case WM_LBUTTONUP:
+            input_process_mouse_button(INPUT_MOUSE_BUTTON_LEFT, msg == WM_LBUTTONDOWN);
+            break;
+
+        case WM_MBUTTONDOWN:
+        case WM_MBUTTONUP:
+            input_process_mouse_button(INPUT_MOUSE_BUTTON_MIDDLE, msg == WM_MBUTTONDOWN);
+            break;
+        
+        case WM_RBUTTONDOWN:
+        case WM_RBUTTONUP:
+            input_process_mouse_button(INPUT_MOUSE_BUTTON_RIGHT, msg == WM_RBUTTONDOWN);
+            break;
+
         default:
             return DefWindowProcA(hwnd, msg, w_param, l_param);
     }
 
     return 0;
+}
+
+void platform_window_handle_message(Platform_Window *window)
+{
+    MSG msg;
+    while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
+        TranslateMessage(&msg);
+        DispatchMessageA(&msg);
+    }
 }
 
 void platform_window_init(Platform_Window *window, const char *title, int x, int y, int width, int height)
@@ -43,7 +80,7 @@ void platform_window_init(Platform_Window *window, const char *title, int x, int
     wc.hbrBackground = NULL;
 
     if (!RegisterClassA(&wc)) {
-        LOG_ERROR("Window registration failed");
+        LOG_ERROR("Window registration failed\n");
         exit(1);
     }
 
@@ -69,23 +106,14 @@ void platform_window_init(Platform_Window *window, const char *title, int x, int
         NULL, NULL, handle->h_instance, NULL);
 
     if (hwnd == NULL) {
-        LOG_ERROR("Window creation failed");
+        LOG_ERROR("Window creation failed\n");
         exit(1);
     }
 
     handle->hwnd = hwnd;
 
-    LOG_INFO("Showing application window\n");
     // This is how we want to show the window (e.g. normal, minimized, maximized, etc.)
     ShowWindow(handle->hwnd, SW_SHOWNORMAL);
-
-    for (;;) {
-        MSG msg;
-        while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
-            TranslateMessage(&msg);
-            DispatchMessageA(&msg);
-        }
-    }
 }
 
 void platform_window_destroy(Platform_Window *window)

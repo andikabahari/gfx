@@ -5,18 +5,17 @@
 
 #include "log.h"
 
-static u64 total_allocated = 0;
-static u64 tagged_allocations[MEMORY_TAG_MAX_TAGS] = {0};
+static size_t total_allocated = 0;
+static size_t tagged_allocations[MAX_MEMORY_TAGS] = {0};
 
 // Do malloc and zero out memory
-void *memory_alloc(u64 size, Memory_Tag tag)
+void *memory_alloc(size_t size, Memory_Tag tag)
 {
     void *block = malloc(size);
     if (block == NULL) {
-        LOG_ERROR("Failed allocating memory, tried to allocate %zu bytes", size);
+        LOG_ERROR("Failed allocating memory, tried to allocate %llu bytes", size);
         exit(1);
     }
-    memset(block, 0, size);
 
     if (tag == MEMORY_TAG_UNKNOWN) {
         LOG_WARNING("Allocating memory with MEMORY_TAG_UNKNOWN\n");
@@ -28,7 +27,12 @@ void *memory_alloc(u64 size, Memory_Tag tag)
     return block;
 }
 
-void memory_free(void *block, u64 size, Memory_Tag tag)
+void memory_zero(void *block, size_t size)
+{
+    memset(block, 0, size);
+}
+
+void memory_free(void *block, size_t size, Memory_Tag tag)
 {
     if (tag == MEMORY_TAG_UNKNOWN) {
         LOG_WARNING("Freeing memory with MEMORY_TAG_UNKNOWN\n");
@@ -40,19 +44,19 @@ void memory_free(void *block, u64 size, Memory_Tag tag)
     free(block);
 }
 
-void *memory_copy(void *dest, const void *source, u64 size)
+void *memory_copy(void *dest, const void *src, size_t size)
 {
-    return memcpy(dest, source, size);
+    return memcpy(dest, src, size);
 }
 
 // Get allocated memory usage in bytes
-u64 get_total_memory_usage()
+size_t get_total_memory_usage()
 {
     return total_allocated;
 }
 
 // Get allocated memory usage in bytes (by tag)
-u64 get_memory_usage_by_tag(Memory_Tag tag)
+size_t get_memory_usage_by_tag(Memory_Tag tag)
 {
     return tagged_allocations[tag];
 }
