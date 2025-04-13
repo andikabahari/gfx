@@ -3,6 +3,7 @@
 #include "array.h"
 #include "event.h"
 #include "input.h"
+#include "vulkan.h"
 
 bool is_running = true;
 
@@ -37,6 +38,9 @@ bool handle_key_released(int event_type, void *listener, Event_Context ctx)
 int main(void)
 {    
     LOG_INFO("Starting application\n");
+
+    LOG_INFO("Initializing Vulkan\n");
+    vulkan_init();
     
     LOG_INFO("Initializing input system\n");
     input_init();
@@ -65,6 +69,8 @@ int main(void)
         event_destroy();
 
         input_destroy();
+
+        vulkan_destroy();
     }
     return 0;
 }
