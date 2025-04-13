@@ -13,8 +13,7 @@ void *memory_alloc(size_t size, Memory_Tag tag)
 {
     void *block = malloc(size);
     if (block == NULL) {
-        LOG_ERROR("Failed allocating memory, tried to allocate %llu bytes", size);
-        exit(1);
+        LOG_FATAL("Failed allocating memory, tried to allocate %llu bytes", size);
     }
 
     if (tag == MEMORY_TAG_UNKNOWN) {

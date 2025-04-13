@@ -80,8 +80,7 @@ void platform_window_init(Platform_Window *window, const char *title, int x, int
     wc.hbrBackground = NULL;
 
     if (!RegisterClassA(&wc)) {
-        LOG_ERROR("Window registration failed\n");
-        exit(1);
+        LOG_FATAL("Window registration failed\n");
     }
 
     RECT rect = {0};
@@ -106,8 +105,7 @@ void platform_window_init(Platform_Window *window, const char *title, int x, int
         NULL, NULL, handle->h_instance, NULL);
 
     if (hwnd == NULL) {
-        LOG_ERROR("Window creation failed\n");
-        exit(1);
+        LOG_FATAL("Window creation failed\n");
     }
 
     handle->hwnd = hwnd;
