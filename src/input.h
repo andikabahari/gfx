@@ -1,7 +1,7 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-#include "types.h"
+#include "common.h"
 
 void input_init();
 void input_destroy();

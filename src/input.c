@@ -1,6 +1,6 @@
 #include "input.h"
 
-#include "types.h"
+#include "common.h"
 #include "memory.h"
 #include "event.h"
 #include "log.h"

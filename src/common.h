@@ -17,4 +17,6 @@ typedef signed long long i64;
 typedef float f32;
 typedef double f64;
 
+#define DEBUG_MODE
+
 #endif

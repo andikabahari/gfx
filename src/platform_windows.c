@@ -5,7 +5,7 @@
 #include <windows.h>
 #include <windowsx.h>
 
-#include "types.h"
+#include "common.h"
 #include "log.h"
 #include "input.h"
 

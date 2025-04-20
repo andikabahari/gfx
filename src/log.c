@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "types.h"
+#include "common.h"
 #include "platform.h"
 
 void log_output_fmt(Log_Level level, const char *fmt, ...)

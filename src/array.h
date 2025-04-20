@@ -1,7 +1,7 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#include "types.h"
+#include "common.h"
 
 typedef enum {
     ARRAY_HEADER_CAPACITY = 0,

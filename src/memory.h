@@ -1,7 +1,7 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
-#include "types.h"
+#include "common.h"
 
 typedef enum {
     MEMORY_TAG_UNKNOWN = 0,
