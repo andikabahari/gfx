@@ -1,6 +1,7 @@
 #include "vulkan.h"
 
-#include <vulkan/vulkan.h>
+#include "vulkan_types.h"
+
 #include <assert.h>
 #include <string.h>
 
@@ -18,11 +19,7 @@ const bool enable_validation_layers = false;
 // TODO: this is temporary
 #define VK_CHECK(expr) assert((expr) == VK_SUCCESS)
 
-static struct {
-    VkInstance instance;
-    VkAllocationCallbacks *allocator;
-    VkDebugUtilsMessengerEXT debug_messenger;
-} vk;
+static Vulkan_Context context;
 
 static void check_validation_layer_support()
 {
@@ -30,14 +27,14 @@ static void check_validation_layer_support()
 
     const char **validation_layer_names = array_create(const char *);
     array_push(validation_layer_names, &"VK_LAYER_KHRONOS_validation");
-    u32 validation_layer_names_count = array_length(validation_layer_names);
+    u32 validation_layer_name_count = array_length(validation_layer_names);
 
     u32 available_layers_count = 0;
     VK_CHECK(vkEnumerateInstanceLayerProperties(&available_layers_count, NULL));
     VkLayerProperties *available_layers = array_reserve(VkLayerProperties, available_layers_count);
     VK_CHECK(vkEnumerateInstanceLayerProperties(&available_layers_count, available_layers));
 
-    for (u32 i = 0; i < validation_layer_names_count; ++i) {
+    for (u32 i = 0; i < validation_layer_name_count; ++i) {
         bool found = false;
         for (u32 j = 0; j < available_layers_count; ++j) {
             if (strcmp(validation_layer_names[i], available_layers[j].layerName) == 0) {
@@ -90,7 +87,7 @@ static void create_instance()
         .ppEnabledExtensionNames = extension_names,
     };
 
-    if (vkCreateInstance(&create_info, vk.allocator, &vk.instance) != VK_SUCCESS) {
+    if (vkCreateInstance(&create_info, context.allocator, &context.instance) != VK_SUCCESS) {
         LOG_FATAL("Failed to create Vulkan instance\n");
     }
 }
@@ -138,26 +135,120 @@ static void setup_debug_messenger()
     };
 
     PFN_vkCreateDebugUtilsMessengerEXT callback =
-        (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk.instance, "vkCreateDebugUtilsMessengerEXT");
-    VK_CHECK(callback(vk.instance, &create_info, vk.allocator, &vk.debug_messenger));
+        (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(context.instance, "vkCreateDebugUtilsMessengerEXT");
+    VK_CHECK(callback(context.instance, &create_info, context.allocator, &context.debug_messenger));
 }
 
-void vulkan_init()
+Vulkan_Queue_Family_Index find_queue_family(VkPhysicalDevice device)
 {
-    vk.allocator = NULL;
+    u32 queue_family_count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, NULL);
+
+    VkQueueFamilyProperties queue_families[queue_family_count];
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families);
+
+    Vulkan_Queue_Family_Index queue_family_index = {
+        .graphics = -1,
+        .present = -1,
+    };
+
+    for (u32 i = 0; i < queue_family_count; ++i) {
+        if (queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            queue_family_index.graphics = i;
+        }
+
+        VkBool32 present_support = VK_FALSE;
+        VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(device, i, context.surface, &present_support));
+        if (present_support) {
+            queue_family_index.present = i;
+        }
+    }
+
+    return queue_family_index;
+}
+
+bool valid_queue_family(Vulkan_Queue_Family_Index index)
+{
+    return index.graphics != -1 && index.present != -1; 
+}
+
+static int rate_device_suitability(VkPhysicalDevice device)
+{
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(device, &properties);
+
+    VkPhysicalDeviceFeatures features;
+    vkGetPhysicalDeviceFeatures(device, &features);
+
+    int score = 0;
+
+    if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) score += 1000;
+
+    // Maximum possible size of textures affects graphics quality
+    score += properties.limits.maxImageDimension2D;
+
+    // Application can't function without geometry shaders
+    if (!features.geometryShader) return 0;
+
+    return score;
+}
+
+static void pick_physical_device()
+{
+    u32 device_count = 0;
+    VK_CHECK(vkEnumeratePhysicalDevices(context.instance, &device_count, NULL));
+    if (device_count == 0) {
+        LOG_FATAL("Failed to find GPUs with Vulkan support\n");
+    }
+
+    VkPhysicalDevice physical_devices[device_count];
+    VK_CHECK(vkEnumeratePhysicalDevices(context.instance, &device_count, physical_devices));
+
+    struct {
+        u32  index;
+        int  score;
+        bool found;
+    } best_picked = {-1, 0, false};
+
+    for (u32 i = 0; i < device_count; ++i) {
+        Vulkan_Queue_Family_Index queue_family_index = find_queue_family(physical_devices[i]);
+        if (!valid_queue_family(queue_family_index)) break;
+
+        int score = rate_device_suitability(physical_devices[i]);
+        if (score > best_picked.score) {
+            best_picked.index = i;
+            best_picked.score = score;
+            best_picked.found = true;
+        }
+    }
+
+    if (!best_picked.found) {
+        LOG_FATAL("Failed to faind a suitable GPU\n");
+    }
+
+    context.physical_device = physical_devices[best_picked.index];
+}
+
+void vulkan_init(Platform_Window *window)
+{
+    context.allocator = NULL;
+    context.physical_device = NULL;
 
     check_validation_layer_support();
     create_instance();
     setup_debug_messenger();
+    platform_window_create_vulkan_surface(window, &context);
+    pick_physical_device();
 }
 
+// TODO: cleanup heap-allocated variables
 void vulkan_destroy()
 {
     if (enable_validation_layers) {
         PFN_vkDestroyDebugUtilsMessengerEXT callback =
-            (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk.instance, "vkDestroyDebugUtilsMessengerEXT");
-        callback(vk.instance, vk.debug_messenger, vk.allocator);
+            (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(context.instance, "vkDestroyDebugUtilsMessengerEXT");
+        callback(context.instance, context.debug_messenger, context.allocator);
     }
 
-    vkDestroyInstance(vk.instance, vk.allocator);
+    vkDestroyInstance(context.instance, context.allocator);
 }

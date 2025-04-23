@@ -36,12 +36,9 @@ bool handle_key_released(int event_type, void *listener, Event_Context ctx)
 }
 
 int main(void)
-{    
+{
     LOG_INFO("Starting application\n");
 
-    LOG_INFO("Initializing Vulkan\n");
-    vulkan_init();
-    
     LOG_INFO("Initializing input system\n");
     input_init();
 
@@ -54,12 +51,15 @@ int main(void)
     Platform_Window window;
     platform_window_init(&window, "App window", 100, 100, 1280, 720);
 
+    LOG_INFO("Initializing Vulkan\n");
+    vulkan_init(&window);
+
     while (is_running) {
         platform_window_handle_message(&window);
 
         input_update(NULL);
     }
-    
+
     // Clean up
     {
         platform_window_destroy(&window);

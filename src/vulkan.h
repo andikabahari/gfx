@@ -1,7 +1,9 @@
 #ifndef VULKAN_H
 #define VULKAN_H
 
-void vulkan_init();
+#include "platform.h"
+
+void vulkan_init(Platform_Window *window);
 void vulkan_destroy();
 
 #endif

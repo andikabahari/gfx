@@ -5,13 +5,17 @@
 #include <windows.h>
 #include <windowsx.h>
 
+#include <vulkan/vulkan_win32.h>
+#include "vulkan_types.h"
+
 #include "common.h"
 #include "log.h"
 #include "input.h"
 
 typedef struct {
-    HINSTANCE h_instance;
-    HWND      hwnd;
+    HINSTANCE    h_instance;
+    HWND         hwnd;
+    VkSurfaceKHR surface;
 } Window_Handle;
 
 LRESULT CALLBACK _platform_window_handle_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param)
@@ -145,6 +149,24 @@ void platform_log_output(Log_Level level, const char *msg)
     WriteConsoleA(handle, msg, (DWORD)strlen(msg), chars_written, 0);
 
     OutputDebugStringA(msg);
+}
+
+void platform_window_create_vulkan_surface(Platform_Window *window, Vulkan_Context *context)
+{
+    Window_Handle *handle = (Window_Handle *)window->handle;
+
+    VkWin32SurfaceCreateInfoKHR create_info = {
+        .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+        .hinstance = handle->h_instance,
+        .hwnd = handle->hwnd,
+    };
+
+    VkResult result = vkCreateWin32SurfaceKHR(context->instance, &create_info, context->allocator, &handle->surface);
+    if (result != VK_SUCCESS) {
+        LOG_FATAL("Failed to create Vulkan surface");
+    }
+    
+    context->surface = handle->surface;
 }
 
 #endif
