@@ -29,14 +29,14 @@ static void check_validation_layer_support()
     array_push(validation_layer_names, &"VK_LAYER_KHRONOS_validation");
     u32 validation_layer_name_count = array_length(validation_layer_names);
 
-    u32 available_layers_count = 0;
-    VK_CHECK(vkEnumerateInstanceLayerProperties(&available_layers_count, NULL));
-    VkLayerProperties *available_layers = array_reserve(VkLayerProperties, available_layers_count);
-    VK_CHECK(vkEnumerateInstanceLayerProperties(&available_layers_count, available_layers));
+    u32 available_layer_count = 0;
+    VK_CHECK(vkEnumerateInstanceLayerProperties(&available_layer_count, NULL));
+    VkLayerProperties *available_layers = array_reserve(VkLayerProperties, available_layer_count);
+    VK_CHECK(vkEnumerateInstanceLayerProperties(&available_layer_count, available_layers));
 
     for (u32 i = 0; i < validation_layer_name_count; ++i) {
         bool found = false;
-        for (u32 j = 0; j < available_layers_count; ++j) {
+        for (u32 j = 0; j < available_layer_count; ++j) {
             if (strcmp(validation_layer_names[i], available_layers[j].layerName) == 0) {
                 found = true;
                 break;
@@ -229,6 +229,37 @@ static void pick_physical_device()
     context.physical_device = physical_devices[best_picked.index];
 }
 
+static void create_logical_device()
+{
+    Vulkan_Queue_Family_Index queue_family_index = find_queue_family(context.physical_device);
+    float queue_priority = 1.0f;
+    VkDeviceQueueCreateInfo queue_create_info = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .queueFamilyIndex = queue_family_index.graphics,
+        .queueCount = 1,
+        .pQueuePriorities = &queue_priority,
+    };
+
+    VkPhysicalDeviceFeatures physical_device_features = {0};
+
+    VkDeviceCreateInfo device_create_info = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pQueueCreateInfos = &queue_create_info,
+        .queueCreateInfoCount = 1,
+        .pEnabledFeatures = &physical_device_features,
+        .enabledExtensionCount = 0,
+
+        // Deprecated and ignored
+        .enabledLayerCount = 0,
+        .ppEnabledLayerNames = 0,  
+    };
+
+    VK_CHECK(vkCreateDevice(context.physical_device, &device_create_info, NULL, &context.logical_device));
+
+    vkGetDeviceQueue(context.logical_device, queue_family_index.graphics, 0, &context.graphics_queue);
+    vkGetDeviceQueue(context.logical_device, queue_family_index.present, 0, &context.present_queue);
+}
+
 void vulkan_init(Platform_Window *window)
 {
     context.allocator = NULL;
@@ -239,6 +270,7 @@ void vulkan_init(Platform_Window *window)
     setup_debug_messenger();
     platform_window_create_vulkan_surface(window, &context);
     pick_physical_device();
+    create_logical_device();
 }
 
 // TODO: cleanup heap-allocated variables

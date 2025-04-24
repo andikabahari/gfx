@@ -6,6 +6,11 @@
 #include "common.h"
 
 typedef struct {
+    u32 graphics;
+    u32 present;
+} Vulkan_Queue_Family_Index;
+
+typedef struct {
     VkInstance                instance;
     VkAllocationCallbacks    *allocator;
     VkDebugUtilsMessengerEXT  debug_messenger;
@@ -13,11 +18,9 @@ typedef struct {
     VkSurfaceKHR surface;
 
     VkPhysicalDevice physical_device;
+    VkDevice         logical_device;
+    VkQueue          graphics_queue;
+    VkQueue          present_queue;
 } Vulkan_Context;
-
-typedef struct {
-    u32 graphics;
-    u32 present;
-} Vulkan_Queue_Family_Index;
 
 #endif
