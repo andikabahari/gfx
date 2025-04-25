@@ -473,21 +473,21 @@ static void create_swapchain()
         context.swapchain_image_views = (VkImageView *)memory_alloc(sizeof(VkImageView) * context.swapchain_image_count, MEMORY_TAG_VULKAN);
     }
     for (u32 i = 0; i < context.swapchain_image_count; ++i) {
-        VkImageViewCreateInfo create_info = {0};
-        create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        create_info.image = context.swapchain_images[i];
-        create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        create_info.format = context.swapchain_image_format;
-        create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        create_info.subresourceRange.baseMipLevel = 0;
-        create_info.subresourceRange.levelCount = 1;
-        create_info.subresourceRange.baseArrayLayer = 0;
-        create_info.subresourceRange.layerCount = 1;
-
+        VkImageViewCreateInfo create_info = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = context.swapchain_images[i],
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = context.swapchain_image_format,
+            .components.r = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .components.g = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .components.b = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .components.a = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .subresourceRange.baseMipLevel = 0,
+            .subresourceRange.levelCount = 1,
+            .subresourceRange.baseArrayLayer = 0,
+            .subresourceRange.layerCount = 1,
+        };
         VULKAN_CHECK(vkCreateImageView(context.logical_device, &create_info, context.allocator, &context.swapchain_image_views[i]));
     }
 
@@ -510,7 +510,14 @@ void vulkan_init(Platform_Window *window)
 
 void vulkan_destroy()
 {
+    for (u32 i = 0; i < context.swapchain_image_count; ++i) {
+        vkDestroyImageView(context.logical_device, context.swapchain_image_views[i], context.allocator);
+    }
+    memory_free(context.swapchain_images, sizeof(VkImage) * context.swapchain_image_count, MEMORY_TAG_VULKAN);
+    context.swapchain_image_count = 0;
     vkDestroySwapchainKHR(context.logical_device, context.swapchain, context.allocator);
+    
+    free_swapchain_support(&context.swapchain_support);
     vkDestroyDevice(context.logical_device, context.allocator);
 
 #ifdef DEBUG_MODE
@@ -521,11 +528,6 @@ void vulkan_destroy()
 
     vkDestroySurfaceKHR(context.instance, context.surface, context.allocator);
     vkDestroyInstance(context.instance, context.allocator);
-
-    free_swapchain_support(&context.swapchain_support);
-
-    memory_free(context.swapchain_images, sizeof(VkImage) * context.swapchain_image_count, MEMORY_TAG_VULKAN);
-    context.swapchain_image_count = 0;
 
     array_destroy(required_extension_names);
 }
