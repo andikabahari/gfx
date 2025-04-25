@@ -329,23 +329,23 @@ static void pick_physical_device()
 
 static void create_logical_device()
 {
-    bool present_shares_graphics_queue =
+    bool shared_present_queue =
         context.queue_family_support.graphics_queue_family_index ==
             context.queue_family_support.present_queue_family_index;
-    bool transfer_shares_graphics_queue =
+    bool shared_transfer_queue =
         context.queue_family_support.graphics_queue_family_index ==
             context.queue_family_support.transfer_queue_family_index;
     
     u32 index_count = 1;
-    if (!present_shares_graphics_queue) index_count++;
-    if (!transfer_shares_graphics_queue) index_count++;
+    if (!shared_present_queue) index_count++;
+    if (!shared_transfer_queue) index_count++;
 
     u32 indices[index_count];
     u32 index = 0;
     indices[index++] = context.queue_family_support.graphics_queue_family_index;
-    if (!present_shares_graphics_queue)
+    if (!shared_present_queue)
         indices[index++] = context.queue_family_support.present_queue_family_index;
-    if (!transfer_shares_graphics_queue)
+    if (!shared_transfer_queue)
         indices[index++] = context.queue_family_support.transfer_queue_family_index;
 
     VkDeviceQueueCreateInfo queue_create_infos[index_count];
@@ -390,13 +390,93 @@ static void create_logical_device()
 
 static void create_swapchain()
 {
-    // TODO: swapchain
+    VkSurfaceFormatKHR surface_format;
+    bool found = false;
+    for (u32 i = 1; i < context.swapchain_support.format_count; ++i) {
+        VkSurfaceFormatKHR available_format = context.swapchain_support.formats[i];
+        if (available_format.format == VK_FORMAT_B8G8R8A8_SRGB &&
+            available_format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            surface_format = available_format;
+            found = true;
+            break;
+        }
+    }
+    if (!found) surface_format = context.swapchain_support.formats[0];
+
+    VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
+    for (u32 i = 0; i < context.swapchain_support.present_mode_count; ++i) {
+        VkPresentModeKHR available_present_mode = context.swapchain_support.present_modes[i];
+        if (available_present_mode == VK_PRESENT_MODE_MAILBOX_KHR) {
+            present_mode = available_present_mode;
+            break;
+        }
+    }
+
+    VkExtent2D extent = {
+        .width = context.framebuffer_width,
+        .height = context.framebuffer_height};
+    if (context.swapchain_support.capabilities.currentExtent.height != UINT32_MAX) {
+        extent = context.swapchain_support.capabilities.currentExtent;
+    } else {
+        VkExtent2D min_extent = context.swapchain_support.capabilities.minImageExtent;
+        VkExtent2D max_extent = context.swapchain_support.capabilities.maxImageExtent;
+        extent.width = CLAMP(extent.width, min_extent.width, max_extent.width);
+        extent.height = CLAMP(extent.height, min_extent.height, max_extent.height);
+    }
+
+    u32 image_count = context.swapchain_support.capabilities.minImageCount + 1;
+    if (context.swapchain_support.capabilities.maxImageCount > 0 && image_count > context.swapchain_support.capabilities.maxImageCount) {
+        image_count = context.swapchain_support.capabilities.maxImageCount;
+    }
+
+    VkSwapchainCreateInfoKHR create_info = {
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = context.surface,
+        .minImageCount = image_count,
+        .imageFormat = surface_format.format,
+        .imageColorSpace = surface_format.colorSpace,
+        .imageExtent = extent,
+        .imageArrayLayers = 1,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+    };
+    
+    if (context.queue_family_support.graphics_queue_family_index !=
+        context.queue_family_support.present_queue_family_index) {
+        u32 queue_family_indices[] = {
+            context.queue_family_support.graphics_queue_family_index,
+            context.queue_family_support.present_queue_family_index};
+        create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        create_info.queueFamilyIndexCount = 2;
+        create_info.pQueueFamilyIndices = queue_family_indices;
+    } else {
+        create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        create_info.queueFamilyIndexCount = 0;
+        create_info.pQueueFamilyIndices = 0;
+    }
+
+    create_info.preTransform = context.swapchain_support.capabilities.currentTransform;
+    create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    create_info.presentMode = present_mode;
+    create_info.clipped = VK_TRUE;
+    create_info.oldSwapchain = VK_NULL_HANDLE;
+
+    VULKAN_CHECK(vkCreateSwapchainKHR(context.logical_device, &create_info, context.allocator, &context.swapchain));
+
+    context.swapchain_image_count = 0;
+    VULKAN_CHECK(vkGetSwapchainImagesKHR(context.logical_device, context.swapchain, &context.swapchain_image_count, NULL));
+    if (context.swapchain_images != NULL) {
+        context.swapchain_images = (VkImage *)memory_alloc(sizeof(VkImage) * context.swapchain_image_count, MEMORY_TAG_VULKAN);
+    }
+    VULKAN_CHECK(vkGetSwapchainImagesKHR(context.logical_device, context.swapchain, &context.swapchain_image_count, context.swapchain_images));
+
+    context.swapchain_image_format = surface_format.format;
+
+    context.swapchain_extent = extent;
 }
 
 void vulkan_init(Platform_Window *window)
 {
     context.allocator = NULL;
-    context.physical_device = NULL;
 
     create_instance();
     setup_debug_messenger();
@@ -421,6 +501,9 @@ void vulkan_destroy()
     vkDestroyInstance(context.instance, context.allocator);
 
     free_swapchain_support(&context.swapchain_support);
+
+    memory_free(context.swapchain_images, sizeof(VkImage) * context.swapchain_image_count, MEMORY_TAG_VULKAN);
+    context.swapchain_image_count = 0;
 
     array_destroy(required_extension_names);
 }

@@ -39,8 +39,12 @@ typedef struct {
 
     VkSwapchainKHR  swapchain;
     VkImage        *swapchain_images;
+    u32             swapchain_image_count;
     VkFormat        swapchain_image_format;
     VkExtent2D      swapchain_extent;
+
+    u32 framebuffer_width;
+    u32 framebuffer_height;
 } Vulkan_Context;
 
 #endif
