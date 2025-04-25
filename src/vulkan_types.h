@@ -41,6 +41,7 @@ typedef struct {
     VkImage        *swapchain_images;
     u32             swapchain_image_count;
     VkFormat        swapchain_image_format;
+    VkImageView    *swapchain_image_views;
     VkExtent2D      swapchain_extent;
 
     u32 framebuffer_width;
