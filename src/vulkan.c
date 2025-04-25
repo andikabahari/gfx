@@ -13,7 +13,7 @@
 
 static Vulkan_Context context;
 
-const char **required_extension_names;
+static const char **required_extension_names;
 
 #ifdef DEBUG_MODE
 const char *validation_layer_names[] = {
@@ -131,6 +131,7 @@ static void create_instance()
         .apiVersion = VK_API_VERSION_1_2,
     };
 
+    required_extension_names = array_create(const char *);
     get_required_extenion_names(&required_extension_names);
 
     VkInstanceCreateInfo create_info = {
@@ -367,7 +368,7 @@ static void create_logical_device()
         context.queue_family_support.transfer_queue_family_index, 0, &context.transfer_queue);
 }
 
-void create_swapchain()
+static void create_swapchain()
 {
     // TODO: swapchain
 }

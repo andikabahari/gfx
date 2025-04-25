@@ -43,7 +43,7 @@ void *_array_insert_at(void *array, size_t index, void *data);
     do {                               \
         typeof(v) temp = (v);          \
         (a) = _array_push((a), &temp); \
-    } while(0)
+    } while (0)
 #define array_pop(a,ptr)       _array_pop((a), (ptr))
 #define array_insert_at(a,i,v)                   \
     do {                                         \
