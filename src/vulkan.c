@@ -13,6 +13,8 @@
 
 static Vulkan_Context context;
 
+const char **required_extension_names;
+
 #ifdef DEBUG_MODE
 const char *validation_layer_names[] = {
     "VK_LAYER_KHRONOS_validation"
@@ -129,14 +131,13 @@ static void create_instance()
         .apiVersion = VK_API_VERSION_1_2,
     };
 
-    const char **extension_names = array_create(const char *);
-    get_required_extenion_names(&extension_names);
+    get_required_extenion_names(&required_extension_names);
 
     VkInstanceCreateInfo create_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pApplicationInfo = &app_info,
-        .enabledExtensionCount = array_length(extension_names),
-        .ppEnabledExtensionNames = extension_names,
+        .enabledExtensionCount = array_length(required_extension_names),
+        .ppEnabledExtensionNames = required_extension_names,
     };
 
     if (vkCreateInstance(&create_info, context.allocator, &context.instance) != VK_SUCCESS) {
@@ -407,4 +408,6 @@ void vulkan_destroy()
         context.swapchain_support.present_modes, sizeof(*context.swapchain_support.present_modes),
         MEMORY_TAG_VULKAN);
     context.swapchain_support.present_mode_count = 0;
+
+    array_destroy(required_extension_names);
 }
