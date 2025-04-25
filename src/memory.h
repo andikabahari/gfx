@@ -6,6 +6,7 @@
 typedef enum {
     MEMORY_TAG_UNKNOWN = 0,
     MEMORY_TAG_ARRAY,
+    MEMORY_TAG_VULKAN,
 
     MAX_MEMORY_TAGS
 } Memory_Tag;
