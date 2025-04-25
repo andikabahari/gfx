@@ -28,9 +28,11 @@ typedef struct {
     VkDebugUtilsMessengerEXT  debug_messenger;
 #endif
     
-    VkPhysicalDevice physical_device;
-    VkDevice         logical_device;
-    
+    VkPhysicalDevice                    physical_device;
+    VkDevice                            logical_device;
+    Vulkan_Swapchain_Support_Details    swapchain_support;
+    Vulkan_Queue_Family_Support_Details queue_family_support;
+
     VkQueue graphics_queue;
     VkQueue present_queue;
     VkQueue transfer_queue;
@@ -39,9 +41,6 @@ typedef struct {
     VkImage        *swapchain_images;
     VkFormat        swapchain_image_format;
     VkExtent2D      swapchain_extent;
-
-    Vulkan_Swapchain_Support_Details    swapchain_support;
-    Vulkan_Queue_Family_Support_Details queue_family_support;
 } Vulkan_Context;
 
 #endif

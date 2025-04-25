@@ -11,15 +11,15 @@
 #include "platform.h"
 #include "memory.h"
 
-static Vulkan_Context context;
+static Vulkan_Context context = {0};
 
 static const char **required_extension_names;
 
 #ifdef DEBUG_MODE
-const char *validation_layer_names[] = {
+static const char *validation_layer_names[] = {
     "VK_LAYER_KHRONOS_validation"
 };
-const u32 validation_layer_name_count = 1;
+static const u32 validation_layer_name_count = 1;
 #endif
 
 static bool check_validation_layer_support()
@@ -146,7 +146,7 @@ static void create_instance()
     }
 }
 
-void get_physical_device_queue_family_support(VkPhysicalDevice device, Vulkan_Queue_Family_Support_Details *details)
+static void get_physical_device_queue_family_support(VkPhysicalDevice device, Vulkan_Queue_Family_Support_Details *details)
 {
     details->graphics_queue_family_index = -1;
     details->present_queue_family_index = -1;
@@ -189,12 +189,12 @@ void get_physical_device_queue_family_support(VkPhysicalDevice device, Vulkan_Qu
     }
 }
 
-bool check_physical_device_queue_family_support(Vulkan_Queue_Family_Support_Details details)
+static bool check_physical_device_queue_family_support(Vulkan_Queue_Family_Support_Details details)
 {
     return details.graphics_queue_family_index != -1 && details.present_queue_family_index != -1; 
 }
 
-void get_physical_device_swapchain_support(VkPhysicalDevice device, Vulkan_Swapchain_Support_Details *details)
+static void get_physical_device_swapchain_support(VkPhysicalDevice device, Vulkan_Swapchain_Support_Details *details)
 {
     VULKAN_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, context.surface, &details->capabilities));
 
@@ -215,10 +215,25 @@ void get_physical_device_swapchain_support(VkPhysicalDevice device, Vulkan_Swapc
     }
 }
 
-const char *physical_device_extension_names[] = {
+static void free_swapchain_support(Vulkan_Swapchain_Support_Details *details)
+{
+    if (details->formats) {
+        memory_free(details->formats, sizeof(VkSurfaceFormatKHR) * details->format_count, MEMORY_TAG_VULKAN);
+        details->formats = NULL;
+        details->format_count = 0;
+    }
+
+    if (details->present_modes) {
+        memory_free(details->present_modes, sizeof(VkPresentModeKHR) * details->present_mode_count, MEMORY_TAG_VULKAN);
+        details->present_modes = NULL;
+        details->present_mode_count = 0;
+    }
+}
+
+static const char *physical_device_extension_names[] = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
-u32 physical_device_extension_count = 1;
+static const u32 physical_device_extension_count = 1;
 
 static bool check_physical_device_extension_support(VkPhysicalDevice device)
 {
@@ -248,9 +263,9 @@ static bool check_physical_device_extension_support(VkPhysicalDevice device)
     return true;
 }
 
-static int rate_physical_device_suitability(VkPhysicalDevice device)
+static u32 rate_physical_device_suitability(VkPhysicalDevice device)
 {
-    int score = 0;
+    u32 score = 0;
     
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(device, &properties);
@@ -261,14 +276,17 @@ static int rate_physical_device_suitability(VkPhysicalDevice device)
     vkGetPhysicalDeviceFeatures(device, &features);
     if (!features.geometryShader) return 0; // Application can't function without geometry shaders
 
-    get_physical_device_queue_family_support(device, &context.queue_family_support);
-    if (!check_physical_device_queue_family_support(context.queue_family_support)) return 0;
+    Vulkan_Queue_Family_Support_Details queue_family_support;
+    get_physical_device_queue_family_support(device, &queue_family_support);
+    if (!check_physical_device_queue_family_support(queue_family_support)) return 0;
 
     if (!check_physical_device_extension_support(device)) return 0;
 
-    get_physical_device_swapchain_support(device, &context.swapchain_support);
+    Vulkan_Swapchain_Support_Details swapchain_support = {0};
+    get_physical_device_swapchain_support(device, &swapchain_support);
     bool swapchain_support_adequate =
-        context.swapchain_support.format_count > 0 && context.swapchain_support.present_mode_count > 0;
+        swapchain_support.format_count > 0 && swapchain_support.present_mode_count > 0;
+    free_swapchain_support(&swapchain_support);
     if (!swapchain_support_adequate) return 0;
 
     return score;
@@ -276,7 +294,7 @@ static int rate_physical_device_suitability(VkPhysicalDevice device)
 
 static void pick_physical_device()
 {
-    u32 physical_device_count = 0;
+    u32 physical_device_count;
     VULKAN_CHECK(vkEnumeratePhysicalDevices(context.instance, &physical_device_count, NULL));
     if (physical_device_count == 0) {
         LOG_FATAL("Failed to find GPUs with Vulkan support\n");
@@ -287,7 +305,7 @@ static void pick_physical_device()
 
     struct {
         u32  index;
-        int  score;
+        u32  score;
         bool found;
     } best_picked = {-1, 0, false};
 
@@ -305,6 +323,8 @@ static void pick_physical_device()
     }
 
     context.physical_device = physical_devices[best_picked.index];
+    get_physical_device_queue_family_support(context.physical_device, &context.queue_family_support);
+    get_physical_device_swapchain_support(context.physical_device, &context.swapchain_support);
 }
 
 static void create_logical_device()
@@ -400,15 +420,7 @@ void vulkan_destroy()
     vkDestroySurfaceKHR(context.instance, context.surface, context.allocator);
     vkDestroyInstance(context.instance, context.allocator);
 
-    memory_free(
-        context.swapchain_support.formats, sizeof(*context.swapchain_support.formats),
-        MEMORY_TAG_VULKAN);
-    context.swapchain_support.format_count = 0;
-
-    memory_free(
-        context.swapchain_support.present_modes, sizeof(*context.swapchain_support.present_modes),
-        MEMORY_TAG_VULKAN);
-    context.swapchain_support.present_mode_count = 0;
+    free_swapchain_support(&context.swapchain_support);
 
     array_destroy(required_extension_names);
 }
