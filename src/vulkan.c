@@ -146,12 +146,12 @@ static void create_instance()
     }
 }
 
-static void get_physical_device_queue_family_support(VkPhysicalDevice device, Vulkan_Queue_Family_Support_Details *details)
+static void get_physical_device_queue_family_support(VkPhysicalDevice device, Vulkan_Queue_Family_Indices *supported_queue_families)
 {
-    details->graphics_queue_family_index = -1;
-    details->present_queue_family_index = -1;
-    details->compute_queue_family_index = -1;
-    details->transfer_queue_family_index = -1;
+    supported_queue_families->graphics_queue_family_index = -1;
+    supported_queue_families->present_queue_family_index = -1;
+    supported_queue_families->compute_queue_family_index = -1;
+    supported_queue_families->transfer_queue_family_index = -1;
 
     u32 queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, NULL);
@@ -165,33 +165,36 @@ static void get_physical_device_queue_family_support(VkPhysicalDevice device, Vu
         VkQueueFlags flags = queue_families[i].queueFlags;
 
         if (flags & VK_QUEUE_GRAPHICS_BIT) {
-            details->graphics_queue_family_index = i;
+            supported_queue_families->graphics_queue_family_index = i;
             ++current_transfer_score;
         }
 
         VkBool32 present_support = VK_FALSE;
         VULKAN_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(device, i, context.surface, &present_support));
         if (present_support) {
-            details->present_queue_family_index = i;
+            supported_queue_families->present_queue_family_index = i;
         }
 
         if (flags & VK_QUEUE_COMPUTE_BIT) {
-            details->compute_queue_family_index = i;
+            supported_queue_families->compute_queue_family_index = i;
             ++current_transfer_score;
         }
 
         if (flags & VK_QUEUE_TRANSFER_BIT) {
             if (current_transfer_score <= min_transfer_score) {
                 min_transfer_score = current_transfer_score;
-                details->transfer_queue_family_index = i;
+                supported_queue_families->transfer_queue_family_index = i;
             }
         }
     }
 }
 
-static bool check_physical_device_queue_family_support(Vulkan_Queue_Family_Support_Details details)
+static bool check_queue_family_support(Vulkan_Queue_Family_Indices supported_queue_families)
 {
-    return details.graphics_queue_family_index != -1 && details.present_queue_family_index != -1; 
+    return supported_queue_families.graphics_queue_family_index != -1
+        && supported_queue_families.present_queue_family_index != -1
+        && supported_queue_families.compute_queue_family_index != -1
+        && supported_queue_families.transfer_queue_family_index != -1;
 }
 
 static void get_physical_device_swapchain_support(VkPhysicalDevice device, Vulkan_Swapchain_Support_Details *details)
@@ -276,9 +279,9 @@ static u32 rate_physical_device_suitability(VkPhysicalDevice device)
     vkGetPhysicalDeviceFeatures(device, &features);
     if (!features.geometryShader) return 0; // Application can't function without geometry shaders
 
-    Vulkan_Queue_Family_Support_Details queue_family_support;
-    get_physical_device_queue_family_support(device, &queue_family_support);
-    if (!check_physical_device_queue_family_support(queue_family_support)) return 0;
+    Vulkan_Queue_Family_Indices supported_queue_families;
+    get_physical_device_queue_family_support(device, &supported_queue_families);
+    if (!check_queue_family_support(supported_queue_families)) return 0;
 
     if (!check_physical_device_extension_support(device)) return 0;
 
@@ -306,35 +309,33 @@ static void pick_physical_device()
     struct {
         u32  index;
         u32  score;
-        bool found;
-    } best_picked = {-1, 0, false};
+    } best_picked = {-1, 0};
 
     for (u32 i = 0; i < physical_device_count; ++i) {
-        int score = rate_physical_device_suitability(physical_devices[i]);
-        if (score > 0 && score > best_picked.score) {
+        u32 score = rate_physical_device_suitability(physical_devices[i]);
+        if (score > best_picked.score) {
             best_picked.index = i;
             best_picked.score = score;
-            best_picked.found = true;
         }
     }
 
-    if (!best_picked.found) {
+    if (best_picked.score == 0) {
         LOG_FATAL("Failed to find a suitable GPU\n");
     }
 
     context.physical_device = physical_devices[best_picked.index];
-    get_physical_device_queue_family_support(context.physical_device, &context.queue_family_support);
+    get_physical_device_queue_family_support(context.physical_device, &context.supported_queue_families);
     get_physical_device_swapchain_support(context.physical_device, &context.swapchain_support);
 }
 
 static void create_logical_device()
 {
     bool shared_present_queue =
-        context.queue_family_support.graphics_queue_family_index ==
-            context.queue_family_support.present_queue_family_index;
+        context.supported_queue_families.graphics_queue_family_index ==
+            context.supported_queue_families.present_queue_family_index;
     bool shared_transfer_queue =
-        context.queue_family_support.graphics_queue_family_index ==
-            context.queue_family_support.transfer_queue_family_index;
+        context.supported_queue_families.graphics_queue_family_index ==
+            context.supported_queue_families.transfer_queue_family_index;
     
     u32 index_count = 1;
     if (!shared_present_queue) index_count++;
@@ -342,11 +343,11 @@ static void create_logical_device()
 
     u32 indices[index_count];
     u32 index = 0;
-    indices[index++] = context.queue_family_support.graphics_queue_family_index;
+    indices[index++] = context.supported_queue_families.graphics_queue_family_index;
     if (!shared_present_queue)
-        indices[index++] = context.queue_family_support.present_queue_family_index;
+        indices[index++] = context.supported_queue_families.present_queue_family_index;
     if (!shared_transfer_queue)
-        indices[index++] = context.queue_family_support.transfer_queue_family_index;
+        indices[index++] = context.supported_queue_families.transfer_queue_family_index;
 
     VkDeviceQueueCreateInfo queue_create_infos[index_count];
     for (u32 i = 0; i < index_count; ++i) {
@@ -379,20 +380,20 @@ static void create_logical_device()
 
     vkGetDeviceQueue(
         context.logical_device,
-        context.queue_family_support.graphics_queue_family_index, 0, &context.graphics_queue);
+        context.supported_queue_families.graphics_queue_family_index, 0, &context.graphics_queue);
     vkGetDeviceQueue(
         context.logical_device,
-        context.queue_family_support.present_queue_family_index, 0, &context.present_queue);
+        context.supported_queue_families.present_queue_family_index, 0, &context.present_queue);
     vkGetDeviceQueue(
         context.logical_device,
-        context.queue_family_support.transfer_queue_family_index, 0, &context.transfer_queue);
+        context.supported_queue_families.transfer_queue_family_index, 0, &context.transfer_queue);
 }
 
 static void create_swapchain()
 {
     VkSurfaceFormatKHR surface_format;
     bool found = false;
-    for (u32 i = 1; i < context.swapchain_support.format_count; ++i) {
+    for (u32 i = 0; i < context.swapchain_support.format_count; ++i) {
         VkSurfaceFormatKHR available_format = context.swapchain_support.formats[i];
         if (available_format.format == VK_FORMAT_B8G8R8A8_SRGB &&
             available_format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
@@ -425,7 +426,8 @@ static void create_swapchain()
     }
 
     u32 image_count = context.swapchain_support.capabilities.minImageCount + 1;
-    if (context.swapchain_support.capabilities.maxImageCount > 0 && image_count > context.swapchain_support.capabilities.maxImageCount) {
+    if (context.swapchain_support.capabilities.maxImageCount > 0 &&
+        image_count > context.swapchain_support.capabilities.maxImageCount) {
         image_count = context.swapchain_support.capabilities.maxImageCount;
     }
 
@@ -440,11 +442,11 @@ static void create_swapchain()
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     };
     
-    if (context.queue_family_support.graphics_queue_family_index !=
-        context.queue_family_support.present_queue_family_index) {
+    if (context.supported_queue_families.graphics_queue_family_index !=
+        context.supported_queue_families.present_queue_family_index) {
         u32 queue_family_indices[] = {
-            context.queue_family_support.graphics_queue_family_index,
-            context.queue_family_support.present_queue_family_index};
+            context.supported_queue_families.graphics_queue_family_index,
+            context.supported_queue_families.present_queue_family_index};
         create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         create_info.queueFamilyIndexCount = 2;
         create_info.pQueueFamilyIndices = queue_family_indices;

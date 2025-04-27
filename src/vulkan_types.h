@@ -10,7 +10,7 @@ typedef struct {
     u32 present_queue_family_index;
     u32 compute_queue_family_index;
     u32 transfer_queue_family_index;
-} Vulkan_Queue_Family_Support_Details;
+} Vulkan_Queue_Family_Indices;
 
 typedef struct {
     VkSurfaceCapabilitiesKHR  capabilities;
@@ -28,10 +28,10 @@ typedef struct {
     VkDebugUtilsMessengerEXT  debug_messenger;
 #endif
     
-    VkPhysicalDevice                    physical_device;
-    VkDevice                            logical_device;
-    Vulkan_Swapchain_Support_Details    swapchain_support;
-    Vulkan_Queue_Family_Support_Details queue_family_support;
+    VkPhysicalDevice                 physical_device;
+    VkDevice                         logical_device;
+    Vulkan_Swapchain_Support_Details swapchain_support;
+    Vulkan_Queue_Family_Indices      supported_queue_families;
 
     VkQueue graphics_queue;
     VkQueue present_queue;
