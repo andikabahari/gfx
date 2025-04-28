@@ -569,11 +569,78 @@ static void create_graphics_pipeline()
     frag_shader_stage_info.pName = "main";
     VkPipelineShaderStageCreateInfo shader_stages[] = {
         vert_shader_stage_info,
-        frag_shader_stage_info};
+        frag_shader_stage_info,
+    };
 
     // TODO: will be deleted soon
     (void)shader_stages;
+
+    // NOTE: we hard code the vertex data directly in the vertex shader,
+    // so we don't have to fill the struct for now.
+    VkPipelineVertexInputStateCreateInfo vertext_input_create_info = {0};
+    vertext_input_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertext_input_create_info.vertexBindingDescriptionCount = 0;
+    vertext_input_create_info.vertexAttributeDescriptionCount = 0;
+
+    VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {0};
+    input_assembly_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_assembly_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    input_assembly_info.primitiveRestartEnable = VK_FALSE;
+
+    VkPipelineViewportStateCreateInfo viewport_create_info = {0};
+    viewport_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewport_create_info.viewportCount = 1;
+    viewport_create_info.scissorCount = 1;
+
+    VkPipelineRasterizationStateCreateInfo rasterizer_create_info = {0};
+    rasterizer_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer_create_info.depthClampEnable = VK_FALSE;
+    rasterizer_create_info.rasterizerDiscardEnable = VK_FALSE;
+    rasterizer_create_info.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer_create_info.lineWidth = 1.0f;
+    rasterizer_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer_create_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer_create_info.depthBiasEnable = VK_FALSE;
+
+    VkPipelineMultisampleStateCreateInfo multisampling_create_info = {0};
+    multisampling_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling_create_info.sampleShadingEnable = VK_FALSE;
+    multisampling_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+    VkPipelineColorBlendAttachmentState color_blend_attachment = {0};
+    color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    color_blend_attachment.blendEnable = VK_FALSE;
+
+    VkPipelineColorBlendStateCreateInfo color_blend_create_info = {0};
+    color_blend_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    color_blend_create_info.logicOpEnable = VK_FALSE;
+    color_blend_create_info.logicOp = VK_LOGIC_OP_COPY;
+    color_blend_create_info.attachmentCount = 1;
+    color_blend_create_info.pAttachments = &color_blend_attachment;
+    color_blend_create_info.blendConstants[0] = 0.0f;
+    color_blend_create_info.blendConstants[1] = 0.0f;
+    color_blend_create_info.blendConstants[2] = 0.0f;
+    color_blend_create_info.blendConstants[3] = 0.0f;
     
+    u32 dynamic_state_count = 2;
+    VkDynamicState dynamic_states[] = {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR,
+    };
+    VkPipelineDynamicStateCreateInfo dynamic_state_create_info = {0};
+    dynamic_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamic_state_create_info.dynamicStateCount = dynamic_state_count;
+    dynamic_state_create_info.pDynamicStates = dynamic_states;
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {0};
+    pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_create_info.setLayoutCount = 0;
+    pipeline_layout_create_info.pushConstantRangeCount = 0;
+
+    VULKAN_CHECK(
+        vkCreatePipelineLayout(
+            context.logical_device, &pipeline_layout_create_info, context.allocator, &context.pipeline_layout));
+
     vkDestroyShaderModule(context.logical_device, frag_shader_module, NULL);
     memory_free(frag_shader_code, frag_shader_size, MEMORY_TAG_STRING);
 
@@ -596,6 +663,8 @@ void vulkan_init(Platform_Window *window)
 
 void vulkan_destroy()
 {
+    vkDestroyPipelineLayout(context.logical_device, context.pipeline_layout, context.allocator);
+
     for (u32 i = 0; i < context.swapchain_image_count; ++i) {
         vkDestroyImageView(context.logical_device, context.swapchain_image_views[i], context.allocator);
     }

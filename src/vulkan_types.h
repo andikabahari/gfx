@@ -46,6 +46,8 @@ typedef struct {
 
     u32 framebuffer_width;
     u32 framebuffer_height;
+
+    VkPipelineLayout pipeline_layout;
 } Vulkan_Context;
 
 #endif
