@@ -377,7 +377,9 @@ static void create_logical_device()
         .ppEnabledLayerNames = NULL,  
     };
 
-    VULKAN_CHECK(vkCreateDevice(context.physical_device, &device_create_info, NULL, &context.logical_device));
+    VULKAN_CHECK(
+        vkCreateDevice(
+            context.physical_device, &device_create_info, context.allocator, &context.logical_device));
 
     vkGetDeviceQueue(
         context.logical_device,
