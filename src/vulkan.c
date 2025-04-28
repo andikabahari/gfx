@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "common.h"
 #include "log.h"
@@ -307,8 +308,8 @@ static void pick_physical_device()
     VULKAN_CHECK(vkEnumeratePhysicalDevices(context.instance, &physical_device_count, physical_devices));
 
     struct {
-        u32  index;
-        u32  score;
+        u32 index;
+        u32 score;
     } best_picked = {-1, 0};
 
     for (u32 i = 0; i < physical_device_count; ++i) {
@@ -498,6 +499,88 @@ static void create_swapchain()
     context.swapchain_extent = extent;
 }
 
+static char *read_file(const char *filename, size_t *size)
+{
+    FILE *file = NULL;
+    fopen_s(&file, filename, "rb");
+    if (!file) {
+        LOG_FATAL("Failed to open file\n");
+        return NULL;
+    }
+
+    // Move to the end of the file to get its size
+    fseek(file, 0, SEEK_END);
+    *size = ftell(file);  // get the file size
+    fseek(file, 0, SEEK_SET);  // move back to the beginning of the file
+
+    char *buffer = (char *)memory_alloc(*size, MEMORY_TAG_STRING);
+    if (!buffer) {
+        fclose(file);
+        LOG_FATAL("Failed to allocate memory\n");
+        return NULL;
+    }
+
+    // Read the file content into the buffer
+    fread(buffer, 1, *size, file);
+    fclose(file);
+
+    return buffer;
+}
+
+static void create_graphics_pipeline()
+{
+    size_t vert_shader_size;
+    char *vert_shader_code = read_file("shaders/vert.spv", &vert_shader_size);
+    VkShaderModuleCreateInfo vert_shader_module_create_info = {0};
+    vert_shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vert_shader_module_create_info.codeSize = vert_shader_size;
+    vert_shader_module_create_info.pCode = (u32 *)vert_shader_code;
+    VkShaderModule vert_shader_module;
+    VULKAN_CHECK(
+        vkCreateShaderModule(
+            context.logical_device,
+            &vert_shader_module_create_info,
+            context.allocator,
+            &vert_shader_module));
+
+    size_t frag_shader_size;
+    char *frag_shader_code = read_file("shaders/frag.spv", &frag_shader_size);
+    VkShaderModuleCreateInfo frag_shader_module_create_info = {0};
+    frag_shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    frag_shader_module_create_info.codeSize = frag_shader_size;
+    frag_shader_module_create_info.pCode = (u32 *)frag_shader_code;
+    VkShaderModule frag_shader_module;
+    VULKAN_CHECK(
+        vkCreateShaderModule(
+            context.logical_device,
+            &frag_shader_module_create_info,
+            context.allocator,
+            &frag_shader_module));
+
+    VkPipelineShaderStageCreateInfo vert_shader_stage_info = {0};
+    vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vert_shader_stage_info.module = vert_shader_module;
+    vert_shader_stage_info.pName = "main";
+    VkPipelineShaderStageCreateInfo frag_shader_stage_info = {0};
+    frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    frag_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    frag_shader_stage_info.module = frag_shader_module;
+    frag_shader_stage_info.pName = "main";
+    VkPipelineShaderStageCreateInfo shader_stages[] = {
+        vert_shader_stage_info,
+        frag_shader_stage_info};
+
+    // TODO: will be deleted soon
+    (void)shader_stages;
+    
+    vkDestroyShaderModule(context.logical_device, frag_shader_module, NULL);
+    memory_free(frag_shader_code, frag_shader_size, MEMORY_TAG_STRING);
+
+    vkDestroyShaderModule(context.logical_device, vert_shader_module, NULL);
+    memory_free(vert_shader_code, vert_shader_size, MEMORY_TAG_STRING);
+}
+
 void vulkan_init(Platform_Window *window)
 {
     context.allocator = NULL;
@@ -508,6 +591,7 @@ void vulkan_init(Platform_Window *window)
     pick_physical_device();
     create_logical_device();
     create_swapchain();
+    create_graphics_pipeline();
 }
 
 void vulkan_destroy()

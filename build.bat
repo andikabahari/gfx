@@ -20,4 +20,4 @@ set links=-luser32 -lvulkan-1 -L%VULKAN_SDK%/Lib
 
 echo Building %bin_name%...
 
-@call clang %source_files% %compile_flags% -o %bin_path%/%bin_name%.exe %includes% %links%
+call clang %source_files% %compile_flags% -o %bin_path%/%bin_name%.exe %includes% %links%

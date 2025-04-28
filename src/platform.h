@@ -26,4 +26,6 @@ void platform_window_create_vulkan_surface(Platform_Window *window, Vulkan_Conte
 
 void platform_log_output(Log_Level level, const char *msg);
 
+char *platform_getcwd(char *buffer, size_t size);
+
 #endif

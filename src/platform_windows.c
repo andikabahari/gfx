@@ -4,6 +4,7 @@
 
 #include <windows.h>
 #include <windowsx.h>
+#include <direct.h>
 
 #include <vulkan/vulkan_win32.h>
 #include "vulkan_types.h"
@@ -167,6 +168,11 @@ void platform_window_create_vulkan_surface(Platform_Window *window, Vulkan_Conte
     }
     
     context->surface = handle->surface;
+}
+
+char *platform_getcwd(char *buffer, size_t size)
+{
+    return _getcwd(buffer, size);
 }
 
 #endif
