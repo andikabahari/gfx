@@ -807,10 +807,86 @@ static void create_framebuffers()
     }
 }
 
+static void create_command_pool()
+{
+    VkCommandPoolCreateInfo create_info = {0};
+    create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    create_info.queueFamilyIndex = context.supported_queue_families.graphics_queue_family_index;
+
+    VULKAN_CHECK(
+        vkCreateCommandPool(
+            context.logical_device,
+            &create_info,
+            context.allocator,
+            &context.command_pool));
+}
+
+static void create_command_buffer()
+{
+    VkCommandBufferAllocateInfo alloc_info = {0};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.commandPool = context.command_pool;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandBufferCount = 1;
+
+    VULKAN_CHECK(vkAllocateCommandBuffers(context.logical_device, &alloc_info, &context.command_buffer));
+}
+
+// TODO: delete this
+static void record_command_buffer(VkCommandBuffer command_buffer, u32 image_index) __attribute__((unused));
+
+static void record_command_buffer(VkCommandBuffer command_buffer, u32 image_index)
+{
+    VkCommandBufferBeginInfo cmd_begin_info = {0};
+    cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmd_begin_info.flags = 0; // optional
+    cmd_begin_info.pInheritanceInfo = NULL; // optional, only relevant for secondary command buffers
+    VULKAN_CHECK(vkBeginCommandBuffer(context.command_buffer, &cmd_begin_info));
+
+    VkRenderPassBeginInfo render_begin_info = {0};
+    render_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    render_begin_info.renderPass = context.renderpass;
+    render_begin_info.framebuffer = context.swapchain_framebuffers[image_index];
+    render_begin_info.renderArea.offset.x = 0;
+    render_begin_info.renderArea.offset.y = 0;
+    render_begin_info.renderArea.extent = context.swapchain_extent;
+    VkClearValue clear_color = {0};
+    render_begin_info.clearValueCount = 1;
+    render_begin_info.pClearValues = &clear_color;
+    vkCmdBeginRenderPass(context.command_buffer, &render_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+    // Render pass
+    {
+        vkCmdBindPipeline(
+            context.command_buffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            context.graphics_pipeline);
+    
+        VkViewport viewport = {0};
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = (float)context.swapchain_extent.width;
+        viewport.height = (float)context.swapchain_extent.height;
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        vkCmdSetViewport(context.command_buffer, 0, 1, &viewport);
+    
+        VkRect2D scissor = {0};
+        scissor.offset.x = 0;
+        scissor.offset.y = 0;
+        scissor.extent = context.swapchain_extent;
+        vkCmdSetScissor(context.command_buffer, 0, 1, &scissor);
+    
+        vkCmdDraw(context.command_buffer, 3, 1, 0, 0);
+    }
+
+    vkCmdEndRenderPass(context.command_buffer);
+    VULKAN_CHECK(vkEndCommandBuffer(context.command_buffer));
+}
+
 void vulkan_init(Platform_Window *window)
 {
-    context.allocator = NULL;
-
     create_instance();
     setup_debug_messenger();
     platform_window_create_vulkan_surface(window, &context);
@@ -820,10 +896,14 @@ void vulkan_init(Platform_Window *window)
     create_renderpass();
     create_graphics_pipeline();
     create_framebuffers();
+    create_command_pool();
+    create_command_buffer();
 }
 
 void vulkan_destroy()
 {
+    vkDestroyCommandPool(context.logical_device, context.command_pool, context.allocator);
+
     for (u32 i = 0; i < context.swapchain_image_count; ++i) {
         vkDestroyFramebuffer(context.logical_device, context.swapchain_framebuffers[i], context.allocator);
     }

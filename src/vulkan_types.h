@@ -51,6 +51,9 @@ typedef struct {
     VkRenderPass     renderpass;
     VkPipelineLayout pipeline_layout;
     VkPipeline       graphics_pipeline;
+
+    VkCommandPool   command_pool;
+    VkCommandBuffer command_buffer;
 } Vulkan_Context;
 
 #endif
