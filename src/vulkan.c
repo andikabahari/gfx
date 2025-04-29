@@ -526,6 +526,13 @@ static void create_render_pass()
     render_pass_create_info.pAttachments = &color_attachment;
     render_pass_create_info.subpassCount = 1;
     render_pass_create_info.pSubpasses = &subpass;
+
+    VULKAN_CHECK(
+        vkCreateRenderPass(
+            context.logical_device,
+            &render_pass_create_info,
+            context.allocator,
+            &context.render_pass));
 }
 
 static char *read_file(const char *filename, size_t *size)
