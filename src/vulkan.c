@@ -142,12 +142,11 @@ static void create_instance()
         .ppEnabledExtensionNames = required_extension_names,
     };
 
-    if (vkCreateInstance(&create_info, context.allocator, &context.instance) != VK_SUCCESS) {
-        LOG_FATAL("Failed to create Vulkan instance\n");
-    }
+    VULKAN_CHECK(vkCreateInstance(&create_info, context.allocator, &context.instance));
 }
 
-static void get_physical_device_queue_family_support(VkPhysicalDevice device, Vulkan_Queue_Family_Indices *supported_queue_families)
+static void get_physical_device_queue_family_support(
+    VkPhysicalDevice device, Vulkan_Queue_Family_Indices *supported_queue_families)
 {
     supported_queue_families->graphics_queue_family_index = -1;
     supported_queue_families->present_queue_family_index = -1;
@@ -198,37 +197,63 @@ static bool check_queue_family_support(Vulkan_Queue_Family_Indices supported_que
         && supported_queue_families.transfer_queue_family_index != -1;
 }
 
-static void get_physical_device_swapchain_support(VkPhysicalDevice device, Vulkan_Swapchain_Support_Details *details)
+static void get_physical_device_swapchain_support(
+    VkPhysicalDevice device, Vulkan_Swapchain_Support_Details *details)
 {
-    VULKAN_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, context.surface, &details->capabilities));
+    VULKAN_CHECK(
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, context.surface, &details->capabilities));
 
-    VULKAN_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device, context.surface, &details->format_count, NULL));
+    VULKAN_CHECK(
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, context.surface, &details->format_count, NULL));
     if (details->format_count > 0) {
         if (!details->formats) {
-            details->formats = memory_alloc(sizeof(VkSurfaceFormatKHR) * details->format_count, MEMORY_TAG_VULKAN);
+            details->formats =
+                memory_alloc(sizeof(VkSurfaceFormatKHR) * details->format_count, MEMORY_TAG_VULKAN);
         }
-        VULKAN_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device, context.surface, &details->format_count, details->formats));
+        VULKAN_CHECK(
+            vkGetPhysicalDeviceSurfaceFormatsKHR(
+                device,
+                context.surface,
+                &details->format_count,
+                details->formats));
     }
 
-    VULKAN_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device, context.surface, &details->present_mode_count, NULL));
+    VULKAN_CHECK(
+        vkGetPhysicalDeviceSurfacePresentModesKHR(
+            device,
+            context.surface,
+            &details->present_mode_count,
+            NULL));
     if (details->present_mode_count > 0) {
         if (!details->present_modes) {
-            details->present_modes = memory_alloc(sizeof(VkPresentModeKHR) * details->present_mode_count, MEMORY_TAG_VULKAN);
+            details->present_modes =
+                memory_alloc(sizeof(VkPresentModeKHR) * details->present_mode_count, MEMORY_TAG_VULKAN);
         }
-        VULKAN_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device, context.surface, &details->present_mode_count, details->present_modes));
+        VULKAN_CHECK(
+            vkGetPhysicalDeviceSurfacePresentModesKHR(
+                device,
+                context.surface,
+                &details->present_mode_count,
+                details->present_modes));
     }
 }
 
 static void free_swapchain_support(Vulkan_Swapchain_Support_Details *details)
 {
     if (details->formats) {
-        memory_free(details->formats, sizeof(VkSurfaceFormatKHR) * details->format_count, MEMORY_TAG_VULKAN);
+        memory_free(
+            details->formats,
+            sizeof(VkSurfaceFormatKHR) * details->format_count,
+            MEMORY_TAG_VULKAN);
         details->formats = NULL;
         details->format_count = 0;
     }
 
     if (details->present_modes) {
-        memory_free(details->present_modes, sizeof(VkPresentModeKHR) * details->present_mode_count, MEMORY_TAG_VULKAN);
+        memory_free(
+            details->present_modes,
+            sizeof(VkPresentModeKHR) * details->present_mode_count,
+            MEMORY_TAG_VULKAN);
         details->present_modes = NULL;
         details->present_mode_count = 0;
     }
@@ -242,11 +267,17 @@ static const u32 physical_device_extension_count = 1;
 static bool check_physical_device_extension_support(VkPhysicalDevice device)
 {
     u32 available_extension_count;
-    VULKAN_CHECK(vkEnumerateDeviceExtensionProperties(device, NULL, &available_extension_count, NULL));
+    VULKAN_CHECK(
+        vkEnumerateDeviceExtensionProperties(device, NULL, &available_extension_count, NULL));
 
     if (available_extension_count > 0) {
         VkExtensionProperties available_extensions[available_extension_count];
-        VULKAN_CHECK(vkEnumerateDeviceExtensionProperties(device, NULL, &available_extension_count, available_extensions));
+        VULKAN_CHECK(
+            vkEnumerateDeviceExtensionProperties(
+                device,
+                NULL,
+                &available_extension_count,
+                available_extensions));
 
         for (u32 i = 0; i < physical_device_extension_count; ++i) {
             bool found = false;
@@ -299,13 +330,15 @@ static u32 rate_physical_device_suitability(VkPhysicalDevice device)
 static void pick_physical_device()
 {
     u32 physical_device_count;
-    VULKAN_CHECK(vkEnumeratePhysicalDevices(context.instance, &physical_device_count, NULL));
+    VULKAN_CHECK(
+        vkEnumeratePhysicalDevices(context.instance, &physical_device_count, NULL));
     if (physical_device_count == 0) {
         LOG_FATAL("Failed to find GPUs with Vulkan support\n");
     }
 
     VkPhysicalDevice physical_devices[physical_device_count];
-    VULKAN_CHECK(vkEnumeratePhysicalDevices(context.instance, &physical_device_count, physical_devices));
+    VULKAN_CHECK(
+        vkEnumeratePhysicalDevices(context.instance, &physical_device_count, physical_devices));
 
     struct {
         u32 index;
@@ -379,17 +412,26 @@ static void create_logical_device()
 
     VULKAN_CHECK(
         vkCreateDevice(
-            context.physical_device, &device_create_info, context.allocator, &context.logical_device));
+            context.physical_device,
+            &device_create_info,
+            context.allocator,
+            &context.logical_device));
 
     vkGetDeviceQueue(
         context.logical_device,
-        context.supported_queue_families.graphics_queue_family_index, 0, &context.graphics_queue);
+        context.supported_queue_families.graphics_queue_family_index,
+        0,
+        &context.graphics_queue);
     vkGetDeviceQueue(
         context.logical_device,
-        context.supported_queue_families.present_queue_family_index, 0, &context.present_queue);
+        context.supported_queue_families.present_queue_family_index,
+        0,
+        &context.present_queue);
     vkGetDeviceQueue(
         context.logical_device,
-        context.supported_queue_families.transfer_queue_family_index, 0, &context.transfer_queue);
+        context.supported_queue_families.transfer_queue_family_index,
+        0,
+        &context.transfer_queue);
 }
 
 static void create_swapchain()
@@ -418,7 +460,8 @@ static void create_swapchain()
 
     VkExtent2D extent = {
         .width = context.framebuffer_width,
-        .height = context.framebuffer_height};
+        .height = context.framebuffer_height,
+    };
     if (context.swapchain_support.capabilities.currentExtent.height != UINT32_MAX) {
         extent = context.swapchain_support.capabilities.currentExtent;
     } else {
@@ -465,17 +508,34 @@ static void create_swapchain()
     create_info.clipped = VK_TRUE;
     create_info.oldSwapchain = VK_NULL_HANDLE;
 
-    VULKAN_CHECK(vkCreateSwapchainKHR(context.logical_device, &create_info, context.allocator, &context.swapchain));
+    VULKAN_CHECK(
+        vkCreateSwapchainKHR(
+            context.logical_device,
+            &create_info,
+            context.allocator,
+            &context.swapchain));
 
     context.swapchain_image_count = 0;
-    VULKAN_CHECK(vkGetSwapchainImagesKHR(context.logical_device, context.swapchain, &context.swapchain_image_count, NULL));
+    VULKAN_CHECK(
+        vkGetSwapchainImagesKHR(
+            context.logical_device,
+            context.swapchain,
+            &context.swapchain_image_count,
+            NULL));
     if (context.swapchain_images == NULL) {
-        context.swapchain_images = (VkImage *)memory_alloc(sizeof(VkImage) * context.swapchain_image_count, MEMORY_TAG_VULKAN);
+        context.swapchain_images =
+            (VkImage *)memory_alloc(sizeof(VkImage) * context.swapchain_image_count, MEMORY_TAG_VULKAN);
     }
-    VULKAN_CHECK(vkGetSwapchainImagesKHR(context.logical_device, context.swapchain, &context.swapchain_image_count, context.swapchain_images));
+    VULKAN_CHECK(
+        vkGetSwapchainImagesKHR(
+            context.logical_device,
+            context.swapchain,
+            &context.swapchain_image_count,
+            context.swapchain_images));
 
     if (context.swapchain_image_views == NULL) {
-        context.swapchain_image_views = (VkImageView *)memory_alloc(sizeof(VkImageView) * context.swapchain_image_count, MEMORY_TAG_VULKAN);
+        context.swapchain_image_views =
+            (VkImageView *)memory_alloc(sizeof(VkImageView) * context.swapchain_image_count, MEMORY_TAG_VULKAN);
     }
     for (u32 i = 0; i < context.swapchain_image_count; ++i) {
         VkImageViewCreateInfo create_info = {
@@ -493,7 +553,12 @@ static void create_swapchain()
             .subresourceRange.baseArrayLayer = 0,
             .subresourceRange.layerCount = 1,
         };
-        VULKAN_CHECK(vkCreateImageView(context.logical_device, &create_info, context.allocator, &context.swapchain_image_views[i]));
+        VULKAN_CHECK(
+            vkCreateImageView(
+                context.logical_device,
+                &create_info,
+                context.allocator,
+                &context.swapchain_image_views[i]));
     }
 
     context.swapchain_image_format = surface_format.format;
@@ -510,6 +575,9 @@ static void create_render_pass()
     color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    color_attachment.flags = 0;
 
     VkAttachmentReference color_attachment_ref = {0};
     color_attachment_ref.attachment = 0;
@@ -600,16 +668,13 @@ static void create_graphics_pipeline()
     vert_shader_stage_info.pName = "main";
     VkPipelineShaderStageCreateInfo frag_shader_stage_info = {0};
     frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    frag_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    frag_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     frag_shader_stage_info.module = frag_shader_module;
     frag_shader_stage_info.pName = "main";
     VkPipelineShaderStageCreateInfo shader_stages[] = {
         vert_shader_stage_info,
         frag_shader_stage_info,
     };
-
-    // TODO: will be deleted soon
-    (void)shader_stages;
 
     // NOTE: we hard code the vertex data directly in the vertex shader,
     // so we don't have to fill the struct for now.
@@ -683,6 +748,33 @@ static void create_graphics_pipeline()
             context.allocator,
             &context.pipeline_layout));
 
+    VkGraphicsPipelineCreateInfo pipeline_create_info = {0};
+    pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipeline_create_info.stageCount = 2;
+    pipeline_create_info.pStages = shader_stages;
+    pipeline_create_info.pVertexInputState = &vertext_input_create_info;
+    pipeline_create_info.pInputAssemblyState = &input_assembly_info;
+    pipeline_create_info.pViewportState = &viewport_create_info;
+    pipeline_create_info.pRasterizationState = &rasterizer_create_info;
+    pipeline_create_info.pMultisampleState = &multisampling_create_info;
+    pipeline_create_info.pDepthStencilState = NULL; // optional
+    pipeline_create_info.pColorBlendState = &color_blend_create_info;
+    pipeline_create_info.pDynamicState = &dynamic_state_create_info;
+    pipeline_create_info.layout = context.pipeline_layout;
+    pipeline_create_info.renderPass = context.render_pass;
+    pipeline_create_info.subpass = 0;
+    pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE; // optional
+    pipeline_create_info.basePipelineIndex = -1; // optional
+
+    VULKAN_CHECK(
+        vkCreateGraphicsPipelines(
+            context.logical_device,
+            VK_NULL_HANDLE,
+            1,
+            &pipeline_create_info,
+            context.allocator,
+            &context.graphics_pipeline));
+
     vkDestroyShaderModule(context.logical_device, frag_shader_module, context.allocator);
     memory_free(frag_shader_code, frag_shader_size, MEMORY_TAG_STRING);
 
@@ -706,6 +798,7 @@ void vulkan_init(Platform_Window *window)
 
 void vulkan_destroy()
 {
+    vkDestroyPipeline(context.logical_device, context.graphics_pipeline, context.allocator);
     vkDestroyPipelineLayout(context.logical_device, context.pipeline_layout, context.allocator);
 
     vkDestroyRenderPass(context.logical_device, context.render_pass, context.allocator);

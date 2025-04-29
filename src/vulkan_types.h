@@ -49,6 +49,7 @@ typedef struct {
 
     VkRenderPass     render_pass;
     VkPipelineLayout pipeline_layout;
+    VkPipeline       graphics_pipeline;
 } Vulkan_Context;
 
 #endif
