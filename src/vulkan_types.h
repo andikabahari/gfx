@@ -14,10 +14,10 @@ typedef struct {
 
 typedef struct {
     VkSurfaceCapabilitiesKHR  capabilities;
-    VkSurfaceFormatKHR       *formats;
     u32                       format_count;
-    VkPresentModeKHR         *present_modes;
+    VkSurfaceFormatKHR       *formats;
     u32                       present_mode_count;
+    VkPresentModeKHR         *present_modes;
 } Vulkan_Swapchain_Support_Details;
 
 typedef struct {
@@ -38,16 +38,17 @@ typedef struct {
     VkQueue transfer_queue;
 
     VkSwapchainKHR  swapchain;
-    VkImage        *swapchain_images;
     u32             swapchain_image_count;
+    VkImage        *swapchain_images;
     VkFormat        swapchain_image_format;
     VkImageView    *swapchain_image_views;
     VkExtent2D      swapchain_extent;
+    VkFramebuffer  *swapchain_framebuffers;
 
     u32 framebuffer_width;
     u32 framebuffer_height;
 
-    VkRenderPass     render_pass;
+    VkRenderPass     renderpass;
     VkPipelineLayout pipeline_layout;
     VkPipeline       graphics_pipeline;
 } Vulkan_Context;

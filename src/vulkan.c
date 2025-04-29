@@ -566,7 +566,7 @@ static void create_swapchain()
     context.swapchain_extent = extent;
 }
 
-static void create_render_pass()
+static void create_renderpass()
 {
     VkAttachmentDescription color_attachment = {0};
     color_attachment.format = context.swapchain_image_format;
@@ -588,19 +588,19 @@ static void create_render_pass()
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &color_attachment_ref;
 
-    VkRenderPassCreateInfo render_pass_create_info = {0};
-    render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    render_pass_create_info.attachmentCount = 1;
-    render_pass_create_info.pAttachments = &color_attachment;
-    render_pass_create_info.subpassCount = 1;
-    render_pass_create_info.pSubpasses = &subpass;
+    VkRenderPassCreateInfo renderpass_create_info = {0};
+    renderpass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderpass_create_info.attachmentCount = 1;
+    renderpass_create_info.pAttachments = &color_attachment;
+    renderpass_create_info.subpassCount = 1;
+    renderpass_create_info.pSubpasses = &subpass;
 
     VULKAN_CHECK(
         vkCreateRenderPass(
             context.logical_device,
-            &render_pass_create_info,
+            &renderpass_create_info,
             context.allocator,
-            &context.render_pass));
+            &context.renderpass));
 }
 
 static char *read_file(const char *filename, size_t *size)
@@ -761,7 +761,7 @@ static void create_graphics_pipeline()
     pipeline_create_info.pColorBlendState = &color_blend_create_info;
     pipeline_create_info.pDynamicState = &dynamic_state_create_info;
     pipeline_create_info.layout = context.pipeline_layout;
-    pipeline_create_info.renderPass = context.render_pass;
+    pipeline_create_info.renderPass = context.renderpass;
     pipeline_create_info.subpass = 0;
     pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE; // optional
     pipeline_create_info.basePipelineIndex = -1; // optional
@@ -782,6 +782,31 @@ static void create_graphics_pipeline()
     memory_free(vert_shader_code, vert_shader_size, MEMORY_TAG_STRING);
 }
 
+static void create_framebuffers()
+{
+    context.swapchain_framebuffers = array_reserve(VkFramebuffer, context.swapchain_image_count);
+    for (u32 i = 0; i < context.swapchain_image_count; ++i) {
+        u32 attachment_count = 1;
+        VkImageView attachments[] = {context.swapchain_image_views[i]};
+        
+        VkFramebufferCreateInfo create_info = {0};
+        create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        create_info.renderPass = context.renderpass;
+        create_info.attachmentCount = attachment_count;
+        create_info.pAttachments = attachments;
+        create_info.width = context.swapchain_extent.width;
+        create_info.height = context.swapchain_extent.height;
+        create_info.layers = 1;
+
+        VULKAN_CHECK(
+            vkCreateFramebuffer(
+                context.logical_device,
+                &create_info,
+                context.allocator,
+                &context.swapchain_framebuffers[i]));
+    }
+}
+
 void vulkan_init(Platform_Window *window)
 {
     context.allocator = NULL;
@@ -792,21 +817,27 @@ void vulkan_init(Platform_Window *window)
     pick_physical_device();
     create_logical_device();
     create_swapchain();
-    create_render_pass();
+    create_renderpass();
     create_graphics_pipeline();
+    create_framebuffers();
 }
 
 void vulkan_destroy()
 {
+    for (u32 i = 0; i < context.swapchain_image_count; ++i) {
+        vkDestroyFramebuffer(context.logical_device, context.swapchain_framebuffers[i], context.allocator);
+    }
+
     vkDestroyPipeline(context.logical_device, context.graphics_pipeline, context.allocator);
     vkDestroyPipelineLayout(context.logical_device, context.pipeline_layout, context.allocator);
 
-    vkDestroyRenderPass(context.logical_device, context.render_pass, context.allocator);
+    vkDestroyRenderPass(context.logical_device, context.renderpass, context.allocator);
 
     for (u32 i = 0; i < context.swapchain_image_count; ++i) {
         vkDestroyImageView(context.logical_device, context.swapchain_image_views[i], context.allocator);
     }
-    memory_free(context.swapchain_images, sizeof(VkImage) * context.swapchain_image_count, MEMORY_TAG_VULKAN);
+    memory_free(
+        context.swapchain_images, sizeof(VkImage) * context.swapchain_image_count, MEMORY_TAG_VULKAN);
     context.swapchain_image_count = 0;
     vkDestroySwapchainKHR(context.logical_device, context.swapchain, context.allocator);
     
@@ -815,7 +846,8 @@ void vulkan_destroy()
 
 #ifdef DEBUG_MODE
     PFN_vkDestroyDebugUtilsMessengerEXT callback =
-        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(context.instance, "vkDestroyDebugUtilsMessengerEXT");
+        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+            context.instance, "vkDestroyDebugUtilsMessengerEXT");
     callback(context.instance, context.debug_messenger, context.allocator);
 #endif
 
