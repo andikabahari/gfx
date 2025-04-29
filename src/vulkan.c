@@ -501,6 +501,33 @@ static void create_swapchain()
     context.swapchain_extent = extent;
 }
 
+static void create_render_pass()
+{
+    VkAttachmentDescription color_attachment = {0};
+    color_attachment.format = context.swapchain_image_format;
+    color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+    VkAttachmentReference color_attachment_ref = {0};
+    color_attachment_ref.attachment = 0;
+    color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {0};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_attachment_ref;
+
+    VkRenderPassCreateInfo render_pass_create_info = {0};
+    render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_create_info.attachmentCount = 1;
+    render_pass_create_info.pAttachments = &color_attachment;
+    render_pass_create_info.subpassCount = 1;
+    render_pass_create_info.pSubpasses = &subpass;
+}
+
 static char *read_file(const char *filename, size_t *size)
 {
     FILE *file = NULL;
@@ -610,7 +637,10 @@ static void create_graphics_pipeline()
     multisampling_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
     VkPipelineColorBlendAttachmentState color_blend_attachment = {0};
-    color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT
+        | VK_COLOR_COMPONENT_G_BIT
+        | VK_COLOR_COMPONENT_B_BIT
+        | VK_COLOR_COMPONENT_A_BIT;
     color_blend_attachment.blendEnable = VK_FALSE;
 
     VkPipelineColorBlendStateCreateInfo color_blend_create_info = {0};
@@ -641,12 +671,15 @@ static void create_graphics_pipeline()
 
     VULKAN_CHECK(
         vkCreatePipelineLayout(
-            context.logical_device, &pipeline_layout_create_info, context.allocator, &context.pipeline_layout));
+            context.logical_device,
+            &pipeline_layout_create_info,
+            context.allocator,
+            &context.pipeline_layout));
 
-    vkDestroyShaderModule(context.logical_device, frag_shader_module, NULL);
+    vkDestroyShaderModule(context.logical_device, frag_shader_module, context.allocator);
     memory_free(frag_shader_code, frag_shader_size, MEMORY_TAG_STRING);
 
-    vkDestroyShaderModule(context.logical_device, vert_shader_module, NULL);
+    vkDestroyShaderModule(context.logical_device, vert_shader_module, context.allocator);
     memory_free(vert_shader_code, vert_shader_size, MEMORY_TAG_STRING);
 }
 
@@ -660,12 +693,15 @@ void vulkan_init(Platform_Window *window)
     pick_physical_device();
     create_logical_device();
     create_swapchain();
+    create_render_pass();
     create_graphics_pipeline();
 }
 
 void vulkan_destroy()
 {
     vkDestroyPipelineLayout(context.logical_device, context.pipeline_layout, context.allocator);
+
+    vkDestroyRenderPass(context.logical_device, context.render_pass, context.allocator);
 
     for (u32 i = 0; i < context.swapchain_image_count; ++i) {
         vkDestroyImageView(context.logical_device, context.swapchain_image_views[i], context.allocator);
