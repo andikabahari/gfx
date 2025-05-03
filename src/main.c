@@ -5,6 +5,9 @@
 #include "input.h"
 #include "vulkan.h"
 
+#define SCREEN_WIDTH  1280
+#define SCREEN_HEIGHT 720
+
 bool is_running = true;
 
 bool handle_key_pressed(int event_type, void *listener, Event_Context ctx)
@@ -49,16 +52,20 @@ int main(void)
 
     LOG_INFO("Initializing window\n");
     Platform_Window window;
-    platform_window_init(&window, "App window", 100, 100, 1280, 720);
+    platform_window_init(&window, "App window", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     LOG_INFO("Initializing Vulkan\n");
-    vulkan_init(&window);
+    vulkan_init(&window, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     while (is_running) {
         platform_window_handle_message(&window);
 
         input_update(NULL);
+
+        vulkan_draw_frame();
     }
+
+    vulkan_wait_idle();
 
     // Clean up
     {

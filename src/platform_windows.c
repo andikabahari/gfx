@@ -156,11 +156,10 @@ void platform_window_create_vulkan_surface(Platform_Window *window, Vulkan_Conte
 {
     Window_Handle *handle = (Window_Handle *)window->handle;
 
-    VkWin32SurfaceCreateInfoKHR create_info = {
-        .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
-        .hinstance = handle->h_instance,
-        .hwnd = handle->hwnd,
-    };
+    VkWin32SurfaceCreateInfoKHR create_info = {0};
+    create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    create_info.hinstance = handle->h_instance;
+    create_info.hwnd = handle->hwnd;
 
     VkResult result = vkCreateWin32SurfaceKHR(context->instance, &create_info, context->allocator, &handle->surface);
     if (result != VK_SUCCESS) {

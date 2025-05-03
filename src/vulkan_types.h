@@ -54,6 +54,10 @@ typedef struct {
 
     VkCommandPool   command_pool;
     VkCommandBuffer command_buffer;
+
+    VkSemaphore image_available_semaphore;
+    VkSemaphore render_finished_semaphore;
+    VkFence     in_flight_fence;
 } Vulkan_Context;
 
 #endif

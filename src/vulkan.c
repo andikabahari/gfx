@@ -84,16 +84,15 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
 static void setup_debug_messenger()
 {
 #ifdef DEBUG_MODE
-    VkDebugUtilsMessengerCreateInfoEXT create_info = {
-        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
-        .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT
-            | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
-            | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT,
-        .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
-            | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT
-            | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
-        .pfnUserCallback = debug_callback,
-    };
+    VkDebugUtilsMessengerCreateInfoEXT create_info = {0};
+    create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT
+        | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+        | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+    create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
+        | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT
+        | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+    create_info.pfnUserCallback = debug_callback;
 
     PFN_vkCreateDebugUtilsMessengerEXT callback =
         (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(context.instance, "vkCreateDebugUtilsMessengerEXT");
@@ -123,24 +122,22 @@ static void create_instance()
         LOG_FATAL("Validation layers requested, but not available\n");
     }
 
-    VkApplicationInfo app_info = {
-        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-        .pApplicationName = "Example Vulkan application",
-        .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
-        .pEngineName = "No Engine",
-        .engineVersion = VK_MAKE_VERSION(1, 0, 0),
-        .apiVersion = VK_API_VERSION_1_2,
-    };
+    VkApplicationInfo app_info = {0};
+    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pApplicationName = "Example Vulkan application";
+    app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    app_info.pEngineName = "No Engine";
+    app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    app_info.apiVersion = VK_API_VERSION_1_0;
 
     required_extension_names = array_create(const char *);
     get_required_extenion_names(&required_extension_names);
 
-    VkInstanceCreateInfo create_info = {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .pApplicationInfo = &app_info,
-        .enabledExtensionCount = array_length(required_extension_names),
-        .ppEnabledExtensionNames = required_extension_names,
-    };
+    VkInstanceCreateInfo create_info = {0};
+    create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    create_info.pApplicationInfo = &app_info;
+    create_info.enabledExtensionCount = array_length(required_extension_names);
+    create_info.ppEnabledExtensionNames = required_extension_names;
 
     VULKAN_CHECK(vkCreateInstance(&create_info, context.allocator, &context.instance));
 }
@@ -397,18 +394,17 @@ static void create_logical_device()
     // TODO: I don't know what it is (yet), I'll take a look on it later
     VkPhysicalDeviceFeatures device_features = {0};
 
-    VkDeviceCreateInfo device_create_info = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .queueCreateInfoCount = index_count,
-        .pQueueCreateInfos = queue_create_infos,
-        .pEnabledFeatures = &device_features,
-        .enabledExtensionCount = 1,
-        .ppEnabledExtensionNames = physical_device_extension_names,
+    VkDeviceCreateInfo device_create_info = {0};
+    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_create_info.queueCreateInfoCount = index_count;
+    device_create_info.pQueueCreateInfos = queue_create_infos;
+    device_create_info.pEnabledFeatures = &device_features;
+    device_create_info.enabledExtensionCount = physical_device_extension_count;
+    device_create_info.ppEnabledExtensionNames = physical_device_extension_names;
 
-        // Deprecated and ignored
-        .enabledLayerCount = 0,
-        .ppEnabledLayerNames = NULL,  
-    };
+    // Deprecated and ignored
+    device_create_info.enabledLayerCount = 0;
+    device_create_info.ppEnabledLayerNames = NULL;
 
     VULKAN_CHECK(
         vkCreateDevice(
@@ -462,7 +458,7 @@ static void create_swapchain()
         .width = context.framebuffer_width,
         .height = context.framebuffer_height,
     };
-    if (context.swapchain_support.capabilities.currentExtent.height != UINT32_MAX) {
+    if (context.swapchain_support.capabilities.currentExtent.width != UINT32_MAX) {
         extent = context.swapchain_support.capabilities.currentExtent;
     } else {
         VkExtent2D min_extent = context.swapchain_support.capabilities.minImageExtent;
@@ -477,22 +473,22 @@ static void create_swapchain()
         image_count = context.swapchain_support.capabilities.maxImageCount;
     }
 
-    VkSwapchainCreateInfoKHR create_info = {
-        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = context.surface,
-        .minImageCount = image_count,
-        .imageFormat = surface_format.format,
-        .imageColorSpace = surface_format.colorSpace,
-        .imageExtent = extent,
-        .imageArrayLayers = 1,
-        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-    };
+    VkSwapchainCreateInfoKHR create_info = {0};
+    create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    create_info.surface = context.surface;
+    create_info.minImageCount = image_count;
+    create_info.imageFormat = surface_format.format;
+    create_info.imageColorSpace = surface_format.colorSpace;
+    create_info.imageExtent = extent;
+    create_info.imageArrayLayers = 1;
+    create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     
     if (context.supported_queue_families.graphics_queue_family_index !=
         context.supported_queue_families.present_queue_family_index) {
         u32 queue_family_indices[] = {
             context.supported_queue_families.graphics_queue_family_index,
-            context.supported_queue_families.present_queue_family_index};
+            context.supported_queue_families.present_queue_family_index,
+        };
         create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         create_info.queueFamilyIndexCount = 2;
         create_info.pQueueFamilyIndices = queue_family_indices;
@@ -515,7 +511,6 @@ static void create_swapchain()
             context.allocator,
             &context.swapchain));
 
-    context.swapchain_image_count = 0;
     VULKAN_CHECK(
         vkGetSwapchainImagesKHR(
             context.logical_device,
@@ -538,21 +533,21 @@ static void create_swapchain()
             (VkImageView *)memory_alloc(sizeof(VkImageView) * context.swapchain_image_count, MEMORY_TAG_VULKAN);
     }
     for (u32 i = 0; i < context.swapchain_image_count; ++i) {
-        VkImageViewCreateInfo create_info = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = context.swapchain_images[i],
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = context.swapchain_image_format,
-            .components.r = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .components.g = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .components.b = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .components.a = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .subresourceRange.baseMipLevel = 0,
-            .subresourceRange.levelCount = 1,
-            .subresourceRange.baseArrayLayer = 0,
-            .subresourceRange.layerCount = 1,
-        };
+        VkImageViewCreateInfo create_info = {0};
+        create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        create_info.image = context.swapchain_images[i];
+        create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        create_info.format = context.swapchain_image_format;
+        create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        create_info.subresourceRange.baseMipLevel = 0;
+        create_info.subresourceRange.levelCount = 1;
+        create_info.subresourceRange.baseArrayLayer = 0;
+        create_info.subresourceRange.layerCount = 1;
+
         VULKAN_CHECK(
             vkCreateImageView(
                 context.logical_device,
@@ -583,17 +578,27 @@ static void create_renderpass()
     color_attachment_ref.attachment = 0;
     color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    VkSubpassDescription subpass = {0};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &color_attachment_ref;
+    VkSubpassDescription subpass_desc = {0};
+    subpass_desc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_desc.colorAttachmentCount = 1;
+    subpass_desc.pColorAttachments = &color_attachment_ref;
+
+    VkSubpassDependency subpass_dependency = {0};
+    subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    subpass_dependency.dstSubpass = 0;
+    subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpass_dependency.srcAccessMask = 0;
+    subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
     VkRenderPassCreateInfo renderpass_create_info = {0};
     renderpass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderpass_create_info.attachmentCount = 1;
     renderpass_create_info.pAttachments = &color_attachment;
     renderpass_create_info.subpassCount = 1;
-    renderpass_create_info.pSubpasses = &subpass;
+    renderpass_create_info.pSubpasses = &subpass_desc;
+    renderpass_create_info.dependencyCount = 1;
+    renderpass_create_info.pDependencies = &subpass_dependency;
 
     VULKAN_CHECK(
         vkCreateRenderPass(
@@ -606,7 +611,7 @@ static void create_renderpass()
 static char *read_file(const char *filename, size_t *size)
 {
     FILE *file = NULL;
-    fopen_s(&file, filename, "rb");
+    fopen_s(&file, filename, "rb+");
     if (!file) {
         LOG_FATAL("Failed to open file\n");
         return NULL;
@@ -617,7 +622,7 @@ static char *read_file(const char *filename, size_t *size)
     *size = ftell(file);  // get the file size
     fseek(file, 0, SEEK_SET);  // move back to the beginning of the file
 
-    char *buffer = (char *)memory_alloc(*size, MEMORY_TAG_STRING);
+    char *buffer = (char *)memory_alloc(*size * sizeof(char), MEMORY_TAG_STRING);
     if (!buffer) {
         fclose(file);
         LOG_FATAL("Failed to allocate memory\n");
@@ -764,7 +769,6 @@ static void create_graphics_pipeline()
     pipeline_create_info.renderPass = context.renderpass;
     pipeline_create_info.subpass = 0;
     pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE; // optional
-    pipeline_create_info.basePipelineIndex = -1; // optional
 
     VULKAN_CHECK(
         vkCreateGraphicsPipelines(
@@ -784,8 +788,12 @@ static void create_graphics_pipeline()
 
 static void create_framebuffers()
 {
-    context.swapchain_framebuffers = array_reserve(VkFramebuffer, context.swapchain_image_count);
+    // context.swapchain_framebuffers = array_reserve(VkFramebuffer, context.swapchain_image_count);
+    
+    context.swapchain_framebuffers =
+        (VkFramebuffer *)memory_alloc(sizeof(VkFramebuffer) * context.swapchain_image_count, MEMORY_TAG_VULKAN);
     for (u32 i = 0; i < context.swapchain_image_count; ++i) {
+        // TODO: we might need depth attachment later
         u32 attachment_count = 1;
         VkImageView attachments[] = {context.swapchain_image_views[i]};
         
@@ -833,9 +841,6 @@ static void create_command_buffer()
     VULKAN_CHECK(vkAllocateCommandBuffers(context.logical_device, &alloc_info, &context.command_buffer));
 }
 
-// TODO: delete this
-static void record_command_buffer(VkCommandBuffer command_buffer, u32 image_index) __attribute__((unused));
-
 static void record_command_buffer(VkCommandBuffer command_buffer, u32 image_index)
 {
     VkCommandBufferBeginInfo cmd_begin_info = {0};
@@ -850,43 +855,88 @@ static void record_command_buffer(VkCommandBuffer command_buffer, u32 image_inde
     render_begin_info.framebuffer = context.swapchain_framebuffers[image_index];
     render_begin_info.renderArea.offset.x = 0;
     render_begin_info.renderArea.offset.y = 0;
-    render_begin_info.renderArea.extent = context.swapchain_extent;
-    VkClearValue clear_color = {0};
-    render_begin_info.clearValueCount = 1;
-    render_begin_info.pClearValues = &clear_color;
-    vkCmdBeginRenderPass(context.command_buffer, &render_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    render_begin_info.renderArea.extent.width = context.swapchain_extent.width;
+    render_begin_info.renderArea.extent.height = context.swapchain_extent.height;
+    render_begin_info.pNext = NULL;
+    u32 clear_value_count = 1;
+    VkClearValue clear_values[1] = {0};
+    clear_values[0].color.float32[0] = 0.0f;
+    clear_values[0].color.float32[1] = 0.0f;
+    clear_values[0].color.float32[2] = 0.0f;
+    clear_values[0].color.float32[3] = 1.0f;
+    render_begin_info.clearValueCount = clear_value_count;
+    render_begin_info.pClearValues = clear_values;
 
-    // Render pass
-    {
-        vkCmdBindPipeline(
-            context.command_buffer,
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
-            context.graphics_pipeline);
-    
-        VkViewport viewport = {0};
-        viewport.x = 0.0f;
-        viewport.y = 0.0f;
-        viewport.width = (float)context.swapchain_extent.width;
-        viewport.height = (float)context.swapchain_extent.height;
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-        vkCmdSetViewport(context.command_buffer, 0, 1, &viewport);
-    
-        VkRect2D scissor = {0};
-        scissor.offset.x = 0;
-        scissor.offset.y = 0;
-        scissor.extent = context.swapchain_extent;
-        vkCmdSetScissor(context.command_buffer, 0, 1, &scissor);
-    
-        vkCmdDraw(context.command_buffer, 3, 1, 0, 0);
-    }
+    // // TODO: fix this!
+    // // Render pass does not work and it will produce "Integer division by zero error."
+    // vkCmdBeginRenderPass(context.command_buffer, &render_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdEndRenderPass(context.command_buffer);
+    // // Render pass
+    // {
+    //     vkCmdBindPipeline(
+    //         context.command_buffer,
+    //         VK_PIPELINE_BIND_POINT_GRAPHICS,
+    //         context.graphics_pipeline);
+    
+    //     VkViewport viewport = {0};
+    //     viewport.x = 0.0f;
+    //     viewport.y = 0.0f;
+    //     viewport.width = (float)context.swapchain_extent.width;
+    //     viewport.height = (float)context.swapchain_extent.height;
+    //     viewport.minDepth = 0.0f;
+    //     viewport.maxDepth = 1.0f;
+    //     vkCmdSetViewport(context.command_buffer, 0, 1, &viewport);
+    
+    //     VkRect2D scissor = {0};
+    //     scissor.offset.x = 0;
+    //     scissor.offset.y = 0;
+    //     scissor.extent = context.swapchain_extent;
+    //     vkCmdSetScissor(context.command_buffer, 0, 1, &scissor);
+    
+    //     vkCmdDraw(context.command_buffer, 3, 1, 0, 0);
+    // }
+
+    // vkCmdEndRenderPass(context.command_buffer);
+
     VULKAN_CHECK(vkEndCommandBuffer(context.command_buffer));
 }
 
-void vulkan_init(Platform_Window *window)
+static void create_sync_objects()
 {
+    VkSemaphoreCreateInfo semaphore_create_info = {0};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VULKAN_CHECK(
+        vkCreateSemaphore(
+            context.logical_device,
+            &semaphore_create_info,
+            context.allocator,
+            &context.image_available_semaphore));
+
+    VULKAN_CHECK(
+        vkCreateSemaphore(
+            context.logical_device,
+            &semaphore_create_info,
+            context.allocator,
+            &context.render_finished_semaphore));
+
+    VkFenceCreateInfo fence_create_info = {0};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    VULKAN_CHECK(
+        vkCreateFence(
+            context.logical_device,
+            &fence_create_info,
+            context.allocator,
+            &context.in_flight_fence));
+}
+
+void vulkan_init(Platform_Window *window, u32 width, u32 height)
+{
+    context.framebuffer_width = width;
+    context.framebuffer_height = height;
+
     create_instance();
     setup_debug_messenger();
     platform_window_create_vulkan_surface(window, &context);
@@ -898,10 +948,15 @@ void vulkan_init(Platform_Window *window)
     create_framebuffers();
     create_command_pool();
     create_command_buffer();
+    create_sync_objects();
 }
 
 void vulkan_destroy()
 {
+    vkDestroySemaphore(context.logical_device, context.image_available_semaphore, context.allocator);
+    vkDestroySemaphore(context.logical_device, context.render_finished_semaphore, context.allocator);
+    vkDestroyFence(context.logical_device, context.in_flight_fence, context.allocator);
+
     vkDestroyCommandPool(context.logical_device, context.command_pool, context.allocator);
 
     for (u32 i = 0; i < context.swapchain_image_count; ++i) {
@@ -935,4 +990,55 @@ void vulkan_destroy()
     vkDestroyInstance(context.instance, context.allocator);
 
     array_destroy(required_extension_names);
+}
+
+void vulkan_wait_idle()
+{
+    vkDeviceWaitIdle(context.logical_device);
+}
+
+void vulkan_draw_frame()
+{
+    vkWaitForFences(context.logical_device, 1, &context.in_flight_fence, VK_TRUE, UINT64_MAX);
+    vkResetFences(context.logical_device, 1, &context.in_flight_fence);
+
+    u32 image_index;
+    VULKAN_CHECK(
+        vkAcquireNextImageKHR(
+            context.logical_device,
+            context.swapchain,
+            UINT64_MAX,
+            context.image_available_semaphore,
+            VK_NULL_HANDLE,
+            &image_index));
+
+    VULKAN_CHECK(vkResetCommandBuffer(context.command_buffer, 0));
+    record_command_buffer(context.command_buffer, image_index);
+
+    VkSemaphore wait_semaphores[] = {context.image_available_semaphore};
+    VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    VkSemaphore signal_semaphores[] = {context.render_finished_semaphore};
+
+    VkSubmitInfo submit_info = {0};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.waitSemaphoreCount = 1;
+    submit_info.pWaitSemaphores = wait_semaphores;
+    submit_info.pWaitDstStageMask = wait_stages;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &context.command_buffer;
+    submit_info.signalSemaphoreCount = 1;
+    submit_info.pSignalSemaphores = signal_semaphores;
+    VULKAN_CHECK(vkQueueSubmit(context.graphics_queue, 1, &submit_info, context.in_flight_fence));
+
+    VkSwapchainKHR swap_chains[] = {context.swapchain};
+
+    VkPresentInfoKHR present_info = {0};
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = signal_semaphores;
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = swap_chains;
+    present_info.pImageIndices = &image_index;
+    present_info.pResults = NULL; // optional
+    VULKAN_CHECK(vkQueuePresentKHR(context.present_queue, &present_info));
 }
